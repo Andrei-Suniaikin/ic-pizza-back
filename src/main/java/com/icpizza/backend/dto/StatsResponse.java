@@ -1,0 +1,31 @@
+package com.icpizza.backend.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.math.BigDecimal;
+
+public record StatsResponse(
+        @JsonProperty("total_revenue")
+        BigDecimal totalRevenue,
+        @JsonProperty("total_order_count")
+        Long totalOrderCount,
+        @JsonProperty("new_customer_ordered_count")
+        Long newCustomerOrderedCount,
+        @JsonProperty("old_customer_ordered_count")
+        Long oldCustomerOrderedCount,
+        @JsonProperty("ARPU")
+        BigDecimal arpu,
+        @JsonProperty("unique_customers_all_time")
+        Long uniqueCustomersAllTime,
+        @JsonProperty("repeat_customers_all_time")
+        Long repeatCustomersAllTime,
+        @JsonProperty("average_order_value_all_time")
+        BigDecimal averageOrderValueAllTime,
+        @JsonProperty("month_total_customers")
+        Long monthTotalCustomers,
+        @JsonProperty("retained_customers")
+        Long retainedCustomers,
+        @JsonProperty("retention_percentage")
+        BigDecimal retentionPercentage
+) {
+}

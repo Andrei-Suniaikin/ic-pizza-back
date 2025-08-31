@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: jdbc:postgresql://${PROD_DB_HOST}/${PROD_DB_NAME}
+    username: ${PROD_DB_USER}
+    password: ${PROD_DB_PASS}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+cors:
+  allowed-origins:  "https://ic-pizza.com"
+
+
+
+socket:
+  host: ${SOCKET_HOST_PROD}
+  port: ${SOCKET_PORT_DEV}
+
+app:
+  allowed-origins:
+    - https://ic-pizza.com
+    - https://ic-pizza-back.onrender.com
+
+server:
+  port: 8000
+
+jahez:
+  base-url: https://integration-api.jahez.net

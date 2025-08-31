@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: backend
+  profiles:
+    active: prod
+  config:
+    import: optional:file:.env[.properties]
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info
+
+logging:
+  level:
+    root: INFO
+
+jahez:
+  base-url: ${JZ_BASE_URL}
+  secret: ${JZ_SECRET}
+  api-key: ${JZ_X_API_KEY}
+  clock-skew-seconds: 60
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
+
+whatsapp:
+  access-token: ${WHATSAPP_ACCESS_TOKEN}
+  phone-number-id: ${PHONE_NUMBER_ID}
+  version: ${VERSION:v21.0}
+  kitchen-phones: "97333607710,97334344772"
+
+tiktok:
+  access-token: ${TIKTOK_ACCESS_TOKEN}
+  pixel-code: ${PIXEL_CODE}
+  tiktok-endpoint: ${TIKTOK_ENDPOINT}

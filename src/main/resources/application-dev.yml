@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DEV_DB_HOST}/${DEV_DB_NAME}
+    username: ${DEV_DB_USER}
+    password: ${DEV_DB_PASS}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+cors:
+  allowed-origins: "http://localhost:3000"
+
+socket:
+
+server:
+  port: 8000
+
+#jahez:
+#  base-url: https://integration-api-staging.jahez.net
