@@ -36,7 +36,7 @@ public class WebsocketOrderMapper {
         ).toList();
 
         String customerName = order.getCustomer() != null ? order.getCustomer().getName() : "";
-        String tel = order.getCustomer() != null ? order.getCustomer().getTelephoneNo() : null;
+        String tel = order.getCustomer() != null ? order.getCustomer().getTelephoneNo() : "rabotyaga";
 
         return new OrderPushTO(
                 order.getId(),

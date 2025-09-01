@@ -39,13 +39,13 @@ public class OrderPostProcessor {
         if (tel != null && !tel.isBlank() && !"Unknown customer".equalsIgnoreCase(tel)) {
             String clientMsg = wa.buildOrderMessage(event.order.getId(), event.items, event.order.getAmountPaid());
             wa.sendOrderConfirmation(tel, clientMsg, event.order.getAmountPaid(), event.order.getId());
+            tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
         }
 
         wa.sendOrderToKitchenText2(event.order.getOrderNo().longValue(), kitchenMsg, tel, false, name);
 
         orderEvents.pushCreated(event.order, event.items);
 
-        tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
     }
 
     @Async

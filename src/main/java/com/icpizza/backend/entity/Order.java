@@ -24,8 +24,8 @@ public class Order {
     @Column(name = "order_no")
     private Integer orderNo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "telephone_no", referencedColumnName = "telephone_no")
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "telephone_no", referencedColumnName = "telephone_no", nullable = true)
     private Customer customer;
 
     @Column(name = "status", length = 255)

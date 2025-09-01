@@ -28,6 +28,8 @@ whatsapp:
   phone-number-id: ${PHONE_NUMBER_ID}
   version: ${VERSION:v21.0}
   kitchen-phones: "97333607710,97334344772"
+#  kitchen-phones: "48512066441"
+
 
 tiktok:
   access-token: ${TIKTOK_ACCESS_TOKEN}

@@ -17,5 +17,11 @@ socket:
 server:
   port: 8000
 
+#logging:
+#  level:
+#    org.springframework.messaging.simp.stomp: DEBUG
+#    org.springframework.web.socket: DEBUG
+#    org.springframework.web.socket.sockjs: DEBUG
+
 #jahez:
 #  base-url: https://integration-api-staging.jahez.net

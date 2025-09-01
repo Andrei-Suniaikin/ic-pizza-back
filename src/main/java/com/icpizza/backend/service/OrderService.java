@@ -60,8 +60,13 @@ public class OrderService {
 
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
-        Optional<Customer> customerOptional = customerService.findCustomer(orderTO.telephoneNo());
-        Customer customer = customerOptional.orElseGet(() -> customerService.createCustomer(orderTO));
+        Customer customer = null;
+        String tel = org.springframework.util.StringUtils.trimWhitespace(orderTO.telephoneNo());
+
+        if (org.springframework.util.StringUtils.hasText(tel)) {
+            customer = customerService.findCustomer(tel)
+                    .orElseGet(() -> customerService.createCustomer(orderTO));
+        }
 
         Order order = orderMapper.toOrderEntity(orderTO, customer);
         orderRepo.saveAndFlush(order);
@@ -69,8 +74,9 @@ public class OrderService {
         List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
         orderItemRepo.saveAll(orderItems);
 
-        customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
-
+        if (customer != null) {
+            customerService.updateCustomer(order, customer);
+        }
         orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems));
 
         return orderMapper.toCreateOrderTO(order, orderItems);

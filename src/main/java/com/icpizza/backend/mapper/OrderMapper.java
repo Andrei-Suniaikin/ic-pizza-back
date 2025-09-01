@@ -7,16 +7,20 @@ import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.enums.OrderStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Component
 public class OrderMapper {
+    private static final Logger log = LoggerFactory.getLogger(OrderMapper.class);
     Random random = new Random();
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
 
@@ -59,11 +63,22 @@ public class OrderMapper {
     }
 
     public CreateOrderTO toCreateOrderTO(Order order, List<OrderItem> items) {
+        Customer customer = order.getCustomer();
+        String telephoneNo = (customer != null)
+                ? order.getCustomer().getTelephoneNo()
+                : null;
+        String name = (customer != null)
+                ? order.getCustomer().getName()
+                : null;
+        Long id = customer!=null
+                ? Long.valueOf(order.getCustomer().getId())
+                : null;
+        log.info(name);
         return new CreateOrderTO(
                 order.getId(),
-                order.getCustomer().getTelephoneNo(),
-                order.getCustomer().getName(),
-                Long.valueOf(order.getCustomer().getId()),
+                telephoneNo,
+                name,
+                id,
                 order.getAmountPaid(),
                 toOrderItemsTO(items),
                 order.getPaymentType(),
