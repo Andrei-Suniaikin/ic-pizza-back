@@ -12,7 +12,7 @@ spring:
     show-sql: false
 
 cors:
-  allowed-origins:  "https://ic-pizza.com"
+  allowed-origins: "https://ic-pizza.com,https://www.ic-pizza.com,https://icpizza-back.onrender.com, http://localhost:3000"
 
 
 

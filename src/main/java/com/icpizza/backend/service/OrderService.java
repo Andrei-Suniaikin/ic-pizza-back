@@ -56,17 +56,29 @@ public class OrderService {
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-
-
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
-        Customer customer = null;
-        String tel = org.springframework.util.StringUtils.trimWhitespace(orderTO.telephoneNo());
+        Boolean hasTelephone = orderTO.telephoneNo()==null? false: true;
 
-        if (org.springframework.util.StringUtils.hasText(tel)) {
-            customer = customerService.findCustomer(tel)
-                    .orElseGet(() -> customerService.createCustomer(orderTO));
+        if (hasTelephone){
+            Optional<Customer> customerOptional = customerRepo.findByTelephoneNo(orderTO.telephoneNo());
+            Customer customer = customerOptional.orElseGet(() -> customerService.createCustomer(orderTO));
+
+
+            Order order = orderMapper.toOrderEntity(orderTO, customer);
+            orderRepo.saveAndFlush(order);
+
+            List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
+            orderItemRepo.saveAll(orderItems);
+
+            customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
+
+            orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems));
+
+            return orderMapper.toCreateOrderTO(order, orderItems);
         }
+
+        Customer customer = null;
 
         Order order = orderMapper.toOrderEntity(orderTO, customer);
         orderRepo.saveAndFlush(order);
@@ -74,9 +86,6 @@ public class OrderService {
         List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
         orderItemRepo.saveAll(orderItems);
 
-        if (customer != null) {
-            customerService.updateCustomer(order, customer);
-        }
         orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems));
 
         return orderMapper.toCreateOrderTO(order, orderItems);
