@@ -21,14 +21,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("update Order o set o.paymentType = :paymentType where o.id = :id")
     int updatePayment(@Param("id") Long id, @Param("paymentType") String paymentType);
 
-    @Query("""
-           select o
-           from Order o
-           left join fetch o.customer
-           where o.status = :status
-           order by o.createdAt desc
-           """)
-    List<Order> findWithCustomerByStatus(@Param("status") String status);
+    @Query("SELECT o FROM Order o " +
+            "LEFT JOIN FETCH o.customer " +
+            "WHERE o.status IN :statuses")
+    List<Order> findWithCustomerByStatuses(@Param("statuses") List<String> statuses);
 
     Optional<Order> findById(Long id);
 

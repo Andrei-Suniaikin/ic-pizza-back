@@ -2,10 +2,13 @@ package com.icpizza.backend.service;
 
 import com.icpizza.backend.dto.ShiftEventRequest;
 import com.icpizza.backend.dto.ShiftEventResponse;
+import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.entity.Event;
 import com.icpizza.backend.enums.EventType;
+import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.repository.EventRepository;
 import com.icpizza.backend.repository.OrderRepository;
+import com.icpizza.backend.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,8 @@ public class ShiftService {
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
     private final EventRepository eventRepo;
     private  final OrderRepository orderRepo;
+    private final TransactionRepository transactionRepo;
+    private final BranchRepository branchRepo;
 
     @Transactional
     public ShiftEventResponse createEvent(ShiftEventRequest request){
@@ -61,10 +66,12 @@ public class ShiftService {
                         ? BigDecimal.ZERO
                         : open.getCashAmount();
 
-                BigDecimal cashOrders = orderRepo.sumCashBetween(from, to);
-                if (cashOrders == null) cashOrders = BigDecimal.ZERO;
+                Branch branch = branchRepo.findByBranchNumber(1);
 
-                BigDecimal expected = initialCash.add(cashOrders).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal cashTransactions = transactionRepo.sumCashBetween(from, to, branch.getId());
+                if (cashTransactions == null) cashTransactions = BigDecimal.ZERO;
+
+                BigDecimal expected = initialCash.add(cashTransactions).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal entered = request.cashAmount().setScale(2, RoundingMode.HALF_UP);
 
                 if (entered.compareTo(expected) != 0) {

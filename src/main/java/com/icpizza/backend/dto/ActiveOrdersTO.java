@@ -15,6 +15,7 @@ public record ActiveOrdersTO(
         String order_created,
         String payment_type,
         String notes,
+        String status,
         java.util.List<ActiveOrderItemTO> items
 ) {
     public record ActiveOrderItemTO(
