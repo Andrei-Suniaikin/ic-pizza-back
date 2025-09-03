@@ -15,6 +15,7 @@ import com.icpizza.backend.mapper.OrderMapper;
 import com.icpizza.backend.repository.CustomerRepository;
 import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.repository.OrderRepository;
+import com.icpizza.backend.repository.TransactionRepository;
 import com.icpizza.backend.websocket.OrderEvents;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class OrderService {
     Random random = new Random();
     private final JahezOrderItemMapper jahezOrderItemMapper;
     private final JahezApi jahezApi;
+    private final TransactionRepository transactionRepo;
 
     private static final List<String> CATEGORY_ORDER = List.of(
             "Combo Deals", "Brick Pizzas", "Pizzas", "Sides", "Sauces", "Beverages"
@@ -59,6 +61,7 @@ public class OrderService {
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
         Boolean hasTelephone = orderTO.telephoneNo()==null? false: true;
+        log.info(String.valueOf(orderTO));
 
         if (hasTelephone){
             Optional<Customer> customerOptional = customerRepo.findByTelephoneNo(orderTO.telephoneNo());
@@ -67,6 +70,7 @@ public class OrderService {
 
             Order order = orderMapper.toOrderEntity(orderTO, customer);
             orderRepo.saveAndFlush(order);
+            log.info(String.valueOf(order));
 
             List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
             orderItemRepo.saveAll(orderItems);
@@ -176,22 +180,19 @@ public class OrderService {
             throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
         }
 
-        // 2) Ветка внутренних заказов: только READY по orderId
-        if (!"READY".equalsIgnoreCase(orderStatusUpdateTO.orderStatus())) {
-            throw new IllegalArgumentException("Only READY allowed when jahezOrderId is null");
-        }
         if (orderStatusUpdateTO.orderId() == null) {
             throw new IllegalArgumentException("orderId is required for READY");
         }
 
-        Order order = orderRepo.findById(orderStatusUpdateTO.orderId())
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderStatusUpdateTO.orderId()));
-        if (order.getStatus() != OrderStatus.toLabel(OrderStatus.READY)) {
-            order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
-            orderRepo.save(order);
-        }
+            Order order = orderRepo.findById(orderStatusUpdateTO.orderId())
+                    .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderStatusUpdateTO.orderId()));
+            if (order.getStatus() != OrderStatus.toLabel(OrderStatus.READY)) {
+                order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
+                orderRepo.save(order);
+            }
+            return order;
 
-        return order;
+
     }
 
     @Transactional
@@ -238,7 +239,10 @@ public class OrderService {
     }
 
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {
-        List<Order> orders = orderRepo.findWithCustomerByStatus(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE));
+        List<Order> orders = orderRepo.findWithCustomerByStatuses(List.of(
+                OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE),
+                OrderStatus.toLabel(OrderStatus.PAID)
+        ));
         if (orders.isEmpty()) return Map.of("orders", List.of());
 
         var ids = orders.stream().map(Order::getId).toList();
@@ -289,6 +293,7 @@ public class OrderService {
                     created,
                     o.getPaymentType(),
                     o.getNotes() == null ? "" : o.getNotes(),
+                    o.getStatus(),
                     itemTOs
             );
         }).toList();
@@ -332,6 +337,35 @@ public class OrderService {
         orderRepo.save(order);
 
         orderPostProcessor.onOrderReady(new OrderPostProcessor.OrderReadyEvent(order));
+    }
+
+    @Transactional
+    public String deleteOrder(String orderId) {
+        long id;
+        try {
+            id = Long.parseLong(orderId);
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid orderId: " + orderId);
+        }
+
+        Order order = orderRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order " + id + " not found"));
+
+        Customer customer = order.getCustomer();
+
+        if(customer!=null){
+            customer.setAmountOfOrders(customer.getAmountOfOrders()-1);
+            customer.setAmountPaid(customer.getAmountPaid().subtract(order.getAmountPaid()));
+            customerRepo.save(customer);
+        }
+
+        if(transactionRepo.existsByOrder(order)){
+            transactionRepo.deleteByOrder(order);
+        }
+
+        orderItemRepo.deleteAllByOrderId(order.getId());
+        orderRepo.deleteById(order.getId());
+        return "Order "+orderId+" was successfully deleted";
     }
 
     public final class Bd {

@@ -76,4 +76,9 @@ public class OrderController {
     public void ack(OrderAckTO ack) {
         orderEvents.handleAck(ack);
     }
+
+    @DeleteMapping("/delete_order")
+    public ResponseEntity<String> deleteOrder(@RequestParam String orderId){
+        return new ResponseEntity<>(orderService.deleteOrder(orderId), HttpStatus.OK);
+    }
 }

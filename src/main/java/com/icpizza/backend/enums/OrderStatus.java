@@ -4,6 +4,7 @@ public enum OrderStatus {
     PENDING("Pending"),
     KITCHEN_PHASE("Kitchen Phase"),
     READY("Ready"),
+    PAID("Paid"),
     ACCEPTED("Accepted"),
     REJECTED("Rejected"),
     A("Accepted"),

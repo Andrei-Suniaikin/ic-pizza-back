@@ -65,7 +65,7 @@ public class OrderPostProcessor {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderReady(OrderReadyEvent orderReadyEvent){
         try {
-            if (orderReadyEvent.order.getCustomer().getTelephoneNo() != null
+            if (orderReadyEvent.order.getCustomer()!= null
                     && !orderReadyEvent.order.getCustomer().getTelephoneNo().isBlank()) {
                 wa.sendReadyMessage(orderReadyEvent.order.getCustomer().getTelephoneNo(),
                         orderReadyEvent.order.getCustomer().getName(),
