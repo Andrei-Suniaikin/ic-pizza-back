@@ -239,10 +239,7 @@ public class OrderService {
     }
 
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {
-        List<Order> orders = orderRepo.findWithCustomerByStatuses(List.of(
-                OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE),
-                OrderStatus.toLabel(OrderStatus.PAID)
-        ));
+        List<Order> orders = orderRepo.findWithCustomerByStatus(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE));
         if (orders.isEmpty()) return Map.of("orders", List.of());
 
         var ids = orders.stream().map(Order::getId).toList();
@@ -294,6 +291,8 @@ public class OrderService {
                     o.getPaymentType(),
                     o.getNotes() == null ? "" : o.getNotes(),
                     o.getStatus(),
+                    o.getIsReady(),
+                    o.getIsPaid(),
                     itemTOs
             );
         }).toList();
@@ -332,6 +331,11 @@ public class OrderService {
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
                         .formatted(markOrderReadyTO.id())));
 
+        order.setIsReady(true);
+
+        Integer duration = (int) Math.max(0, Duration.between(order.getCreatedAt(), LocalDateTime.now(BAHRAIN)).getSeconds());
+
+        order.setReadyTimeStamp(duration);
         order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
 
         orderRepo.save(order);
@@ -353,18 +357,23 @@ public class OrderService {
 
         Customer customer = order.getCustomer();
 
-        if(customer!=null){
-            customer.setAmountOfOrders(customer.getAmountOfOrders()-1);
-            customer.setAmountPaid(customer.getAmountPaid().subtract(order.getAmountPaid()));
-            customerRepo.save(customer);
-        }
-
         if(transactionRepo.existsByOrder(order)){
             transactionRepo.deleteByOrder(order);
         }
 
         orderItemRepo.deleteAllByOrderId(order.getId());
         orderRepo.deleteById(order.getId());
+
+        if(customer!=null){
+            customer.setAmountOfOrders(customer.getAmountOfOrders()-1);
+            if(customer.getAmountOfOrders()==0){
+                customerRepo.delete(customer);
+                return "Order "+orderId+" was successfully deleted";
+            }
+            customer.setAmountPaid(customer.getAmountPaid().subtract(order.getAmountPaid()));
+            customerRepo.save(customer);
+        }
+
         return "Order "+orderId+" was successfully deleted";
     }
 

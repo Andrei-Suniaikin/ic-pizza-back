@@ -84,7 +84,9 @@ public class OrderMapper {
                 order.getPaymentType(),
                 order.getType(),
                 order.getNotes(),
-                order.getAddress()
+                order.getAddress(),
+                order.getIsPaid(),
+                order.getIsReady()
         );
     }
 

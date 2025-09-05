@@ -1,6 +1,7 @@
 package com.icpizza.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.sql.Time;
 
 public record ActiveOrdersTO(
         @JsonProperty("id")
@@ -16,6 +17,8 @@ public record ActiveOrdersTO(
         String payment_type,
         String notes,
         String status,
+        Boolean isReady,
+        Boolean isPaid,
         java.util.List<ActiveOrderItemTO> items
 ) {
     public record ActiveOrderItemTO(
