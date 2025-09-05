@@ -4,7 +4,6 @@ public enum OrderStatus {
     PENDING("Pending"),
     KITCHEN_PHASE("Kitchen Phase"),
     READY("Ready"),
-    PAID("Paid"),
     ACCEPTED("Accepted"),
     REJECTED("Rejected"),
     A("Accepted"),
@@ -19,10 +18,8 @@ public enum OrderStatus {
 
     OrderStatus(String label) { this.label = label; }
 
-    /** Англоязычный лейбл “как на бейдже” */
     public String label() { return label; }
 
-    /** Безопасный доступ (null → "—") */
     public static String toLabel(OrderStatus s) {
         return s == null ? "—" : s.label();
     }

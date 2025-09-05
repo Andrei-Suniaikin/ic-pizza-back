@@ -1,13 +1,11 @@
 package com.icpizza.backend.entity;
 
 
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -30,6 +28,15 @@ public class Order {
 
     @Column(name = "status", length = 255)
     private String status;
+
+    @Column(name = "is_ready")
+    private Boolean isReady=false;
+
+    @Column(name = "is_paid")
+    private Boolean isPaid=false;
+
+    @Column(name = "ready_timestamp")
+    private Integer readyTimeStamp=null;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

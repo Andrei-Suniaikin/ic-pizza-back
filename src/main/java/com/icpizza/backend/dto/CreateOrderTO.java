@@ -28,7 +28,9 @@ public record CreateOrderTO (
         @JsonProperty("type")
         String orderType,
         String notes,
-        String address
+        String address,
+        Boolean isPaid,
+        Boolean isReady
 ){
         public record OrderItemsTO(
                 BigDecimal amount,
