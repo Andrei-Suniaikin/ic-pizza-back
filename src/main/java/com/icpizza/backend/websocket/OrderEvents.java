@@ -33,18 +33,17 @@ public class OrderEvents {
     private static final int MAX_ATTEMPTS = 2;
 
     public void pushCreated(Order order, List<OrderItem> orderItems) {
-        List<OrderItem> items = orderItems;
         MenuSnapshot snap = menuService.getMenu();
-        OrderPushTO payload = pushMapper.toPush(order, items, snap);
+        OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
 
         sendWithAck("/topic/orders", payload);
     }
 
-    public void pushUpdated(Order order) {
-        List<OrderItem> items = orderItemRepo.findByOrderId(order.getId());
+    public void pushUpdated(Order order, List<OrderItem> orderItems) {
         MenuSnapshot snap = menuService.getMenu();
-        OrderPushTO payload = pushMapper.toPush(order, items, snap);
-        ws.convertAndSend("/topic/order-updates", payload);
+        OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
+
+        sendWithAck("/topic/order-updates", payload);
     }
 
     public void handleAck(OrderAckTO ack) {

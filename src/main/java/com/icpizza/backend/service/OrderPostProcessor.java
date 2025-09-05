@@ -57,8 +57,10 @@ public class OrderPostProcessor {
         String tel  = event.order.getCustomer() != null ? event.order.getCustomer().getTelephoneNo() : null;
         String name = event.order.getCustomer() != null ? event.order.getCustomer().getName() : null;
 
-        Integer headerNumber = event.order.getOrderNo(); // или: order.getId().intValue()
+        Integer headerNumber = event.order.getOrderNo();
         wa.sendOrderToKitchenText2(Long.valueOf(headerNumber), kitchenMsg, tel, true, name);
+
+        orderEvents.pushUpdated(event.order, event.items);
     }
 
     @Async

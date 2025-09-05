@@ -17,6 +17,12 @@ socket:
 server:
   port: 8000
 
+whatsapp:
+  access-token: ${WHATSAPP_ACCESS_TOKEN}
+  phone-number-id: ${PHONE_NUMBER_ID}
+  version: ${VERSION:v21.0}
+  kitchen-phones: "48512066441"
+
 #logging:
 #  level:
 #    org.springframework.messaging.simp.stomp: DEBUG

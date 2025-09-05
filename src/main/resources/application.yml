@@ -23,13 +23,6 @@ jahez:
   connect-timeout-ms: 3000
   read-timeout-ms: 5000
 
-whatsapp:
-  access-token: ${WHATSAPP_ACCESS_TOKEN}
-  phone-number-id: ${PHONE_NUMBER_ID}
-  version: ${VERSION:v21.0}
-  kitchen-phones: "97333607710,97334344772"
-#  kitchen-phones: "48512066441"
-
 
 tiktok:
   access-token: ${TIKTOK_ACCESS_TOKEN}
