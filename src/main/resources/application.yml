@@ -2,7 +2,7 @@ spring:
   application:
     name: backend
   profiles:
-    active: prod
+    active: dev
   config:
     import: optional:file:.env[.properties]
   management:

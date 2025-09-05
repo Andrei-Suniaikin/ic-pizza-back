@@ -8,6 +8,7 @@ import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.repository.TransactionRepository;
+import com.icpizza.backend.websocket.OrderEvents;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class PaymentService {
     private final TransactionRepository transactionRepository;
     private final BranchRepository branchRepository;
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
+    private final OrderEvents orderEvents;
 
     @Transactional
     public void orderPayment(OrderPaymentTO orderPaymentTO) {
@@ -43,5 +45,6 @@ public class PaymentService {
 
         order.setIsPaid(true);
         orderRepository.save(order);
+        orderEvents.pushPaid(order.getId());
     }
 }

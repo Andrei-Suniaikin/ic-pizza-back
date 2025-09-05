@@ -31,6 +31,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Optional<Order> findById(Long id);
 
+    @Query("""
+  SELECT o FROM Order o
+  WHERE (o.isPaid = FALSE OR o.isReady = FALSE)
+    AND o.isPaid IS NOT NULL
+    AND o.isReady IS NOT NULL
+  ORDER BY o.createdAt DESC
+""")
+    List<Order> findActiveOrders();
+
 
     @Query("""
            select o from Order o

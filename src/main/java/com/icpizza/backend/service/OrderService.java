@@ -239,7 +239,7 @@ public class OrderService {
     }
 
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {
-        List<Order> orders = orderRepo.findWithCustomerByStatus(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE));
+        List<Order> orders = orderRepo.findActiveOrders();
         if (orders.isEmpty()) return Map.of("orders", List.of());
 
         var ids = orders.stream().map(Order::getId).toList();

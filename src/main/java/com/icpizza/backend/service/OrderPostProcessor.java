@@ -72,6 +72,7 @@ public class OrderPostProcessor {
                 wa.sendReadyMessage(orderReadyEvent.order.getCustomer().getTelephoneNo(),
                         orderReadyEvent.order.getCustomer().getName(),
                         orderReadyEvent.order.getCustomer().getId());
+                orderEvents.pushReady(orderReadyEvent.order.getId());
             }
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
