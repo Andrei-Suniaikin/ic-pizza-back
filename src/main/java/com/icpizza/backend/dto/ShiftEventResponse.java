@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 public record ShiftEventResponse(
-        String status,        // "created"
-        String id,              // event id
+        String status,
+        String id,
         @JsonProperty("shiftNo") Integer shiftNo,
         CashWarning cashWarning
 ){

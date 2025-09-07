@@ -11,7 +11,6 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class WhatsAppService {
@@ -30,170 +29,292 @@ public class WhatsAppService {
     }
 
 
-
-    public String buildOrderMessage(Long orderId, List<OrderItem> sortedItems, BigDecimal totalAmount) {
-        List<String> lines = new ArrayList<>();
+    public String buildOrderMessage(List<OrderItem> sortedItems) {
+        List<String> orderSummaryLines = new ArrayList<>();
 
         for (OrderItem it : sortedItems) {
             int qty = it.getQuantity() == null ? 1 : it.getQuantity();
-            String name = safe(it.getName());
-            String size = safe(it.getSize());
-            String category = safe(it.getCategory());
-            String desc = safe(it.getDescription());
+            String name = (it.getName() == null ? "" : it.getName().trim());
+            String size = (it.getSize() == null ? "" : it.getSize().trim());
+            String category = (it.getCategory() == null ? "" : it.getCategory().trim());
+            String desc = (it.getDescription() == null ? "" : it.getDescription().trim());
 
             List<String> detailsBlock = new ArrayList<>();
 
             if ("Combo Deals".equals(category) && desc.contains(";")) {
-                String[] parts = desc.split(";");
-                for (String part : parts) {
-                    String[] plus = part.trim().split("\\+");
-                    String main = plus[0].trim();
+                String[] comboParts = desc.split(";");
+                for (String part : comboParts) {
+                    String[] lines = part.trim().split("\\+");
+                    String main = lines[0].trim();
                     List<String> extras = new ArrayList<>();
-                    for (int i = 1; i < plus.length; i++) {
-                        String p = plus[i].trim();
-                        if (!p.isEmpty()) extras.add("+" + p);
+                    for (int i = 1; i < lines.length; i++) {
+                        String x = lines[i].trim();
+                        if (!x.isEmpty()) extras.add("+" + x);
                     }
-                    String formatted = "    *" + main + "*\n" +
-                            extras.stream().map(e -> "      " + e).collect(Collectors.joining("\n"));
-                    detailsBlock.add(formatted);
+                    StringBuilder formatted = new StringBuilder();
+                    formatted.append("    *").append(main).append("*\n");
+                    for (int i = 0; i < extras.size(); i++) {
+                        formatted.append("      ").append(extras.get(i));
+                        if (i < extras.size() - 1) formatted.append("\n");
+                    }
+                    detailsBlock.add(formatted.toString());
                 }
             } else {
+                List<String> details = new ArrayList<>();
                 if (!desc.isEmpty()) {
                     String descClean = desc.replace(";", "");
-                    for (String d : descClean.split("\\+")) {
+                    String[] parts = descClean.split("\\+");
+                    for (String d : parts) {
                         String x = d.trim();
-                        if (!x.isEmpty() && !"'".equals(x)) detailsBlock.add("    +" + x);
+                        if (!x.isEmpty() && !"'".equals(x)) details.add(x);
                     }
+                }
+                if (!details.isEmpty()) {
+                    StringBuilder block = new StringBuilder();
+                    for (int i = 0; i < details.size(); i++) {
+                        block.append("    +").append(details.get(i));
+                        if (i < details.size() - 1) block.append("\n");
+                    }
+                    detailsBlock.add(block.toString());
                 }
             }
 
-            String title = qty + "x *" + name + "*";
-            if (!size.isEmpty()) title += " (" + size + ")";
+            StringBuilder title = new StringBuilder();
+            title.append(qty).append("x *").append(name).append("*");
+            if (!size.isEmpty()) title.append(" (").append(size).append(")");
 
-            String full = detailsBlock.isEmpty()
-                    ? title
-                    : title + "\n" + String.join("\n", detailsBlock);
-
-            lines.add(full);
+            String full = title.toString();
+            if (!detailsBlock.isEmpty()) {
+                full = full + "\n" + String.join("\n", detailsBlock);
+            }
+            orderSummaryLines.add(full);
         }
 
-        String body = String.join("\n", lines);
-        return ("""
-                ✅ *Got it! Your order %d is confirmed!*
-
-                %s
-
-                💰 Total: %s BHD
-                Thank you! See you soon! 🍕
-                """).formatted(orderId, body, fmtMoney(totalAmount)).trim();
+        return String.join("\n", orderSummaryLines);
     }
 
-    /** Аналог send_order_confirmation */
-    public void sendOrderConfirmation(String telephoneNo, String messageBody, BigDecimal totalAmount, Long orderId) {
-        Map<String, Object> payload = templatePayload(
-                telephoneNo,
-                "order_confirm",
-                List.of(
-                        headerParam("order_confirm", "✅Got it! Your order " + orderId + " is confirmed!"),
-                        bodyParams(
-                                textParam("total_price", fmtMoney(totalAmount)),
-                                textParam("orderbody", messageBody)
-                        )
+    public void sendOrderConfirmation(String telephoneNo, Integer orderNo, String orderItems, BigDecimal totalAmount) {
+        final java.util.function.UnaryOperator<String> clean = v ->
+                v == null ? "" : v.replaceAll("[\\r\\n\\t]+", " ")
+                        .replaceAll(" {5,}", "    ")
+                        .trim();
+
+        String headerText = clean.apply("✅Got it! Your order " + orderNo + " is confirmed!");
+
+        String totalParam = clean.apply(totalAmount.setScale(3, java.math.RoundingMode.HALF_UP).toPlainString());
+        String itemsInline = clean.apply(orderItems);
+
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("messaging_product", "whatsapp");
+        payload.put("recipient_type", "individual");
+        payload.put("to", telephoneNo);
+        payload.put("type", "template");
+
+        java.util.Map<String, Object> template = new java.util.HashMap<>();
+        template.put("name", "order_confirm");
+        template.put("language", java.util.Map.of("code", "en"));
+
+        java.util.List<java.util.Map<String, Object>> components = new java.util.ArrayList<>();
+
+        components.add(java.util.Map.of(
+                "type", "HEADER",
+                "parameters", java.util.List.of(
+                        java.util.Map.of("type", "text", "parameter_name", "order_confirm", "text", headerText)
                 )
-        );
+        ));
+
+        components.add(java.util.Map.of(
+                "type", "BODY",
+                "parameters", java.util.List.of(
+                        java.util.Map.of("type", "text", "parameter_name", "total_price", "text", totalParam),
+                        java.util.Map.of("type", "text", "parameter_name", "orderbody",    "text", itemsInline)
+                )
+        ));
+
+        template.put("components", components);
+        payload.put("template", template);
+
+        try {
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
+            log.info("[WA client template] {}", json);
+        } catch (Exception ignore) {}
+
         postMessages(payload, "sendOrderConfirmation");
     }
 
     public String buildKitchenMessage(List<OrderItem> sortedItems) {
         List<String> parts = new ArrayList<>();
+
         for (OrderItem it : sortedItems) {
             int qty = it.getQuantity() == null ? 1 : it.getQuantity();
-            String name = safe(it.getName());
-            String size = safe(it.getSize());
-            String desc = safe(it.getDescription());
+            String name = it.getName() == null ? "" : it.getName();
+            String size = it.getSize() == null ? "" : it.getSize();
+            String desc = it.getDescription() == null ? "" : it.getDescription();
 
             List<String> details = new ArrayList<>();
-            for (String d : desc.split("\\+")) {
-                String x = d.trim();
+            String[] pieces = desc.split("\\+");
+            for (String p : pieces) {
+                String x = p.trim();
                 if (!x.isEmpty() && !"'".equals(x)) details.add(x);
             }
             String descText = details.isEmpty() ? "" : " (" + String.join(" + ", details) + ")";
-            parts.add(qty + "x - *" + name + "* (" + size + ")" + descText);
+            String part = qty + "x - *" + name + "* (" + size + ")" + descText;
+            parts.add(part);
         }
+
         return String.join(" | ", parts);
     }
 
-    /** Аналог send_order_to_kitchen_text2 */
-    public void sendOrderToKitchenText2(Long orderId, String messageBody, String telephoneNo, boolean isEdit, String name) {
-        String headerText = (isEdit ? "✏️ Order " + orderId + " updated!" : "✅ New order: " + orderId + "!");
-        String clientInfo = telephoneNo + " (" + (StringUtils.hasText(name) ? name : "") + ")";
+    public void sendOrderToKitchenText2(Integer orderNo, String messageBody, String telephoneNo, boolean isEdit, String name) {
+        String headerText = (isEdit ? "✏️ Order " + orderNo + " updated!" : "✅ New order: " + orderNo + "!")
+                .replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll(" {5,}", "    ")
+                .trim();
+
+        String clientInfo = (org.springframework.util.StringUtils.hasText(name) ? (telephoneNo + " (" + name + ")") : telephoneNo)
+                .replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll(" {5,}", "    ")
+                .trim();
+
+        String orderInline = (messageBody == null ? "" : messageBody)
+                .replace("\t", " ")
+                .replaceAll("[\\r\\n]+", " ")
+                .replaceAll(" {5,}", "    ")
+                .replaceAll("\\s*\\|\\s*", " | ")
+                .trim();
+
+        if (headerText.matches(".*(\\r|\\n|\\t| {5,}).*") ||
+                clientInfo.matches(".*(\\r|\\n|\\t| {5,}).*") ||
+                orderInline.matches(".*(\\r|\\n|\\t| {5,}).*")) {
+            log.warn("[WA kitchen] illegal whitespace remains in template params: header='{}', client='{}', orderInline='{}'",
+                    headerText, clientInfo, orderInline);
+        }
 
         for (String phone : kitchenPhones()) {
-            Map<String, Object> payload = templatePayload(
-                    phone,
-                    "order_info2",
-                    List.of(
-                            headerParam("header", headerText),
-                            bodyParams(
-                                    textParam("client_info", clientInfo),
-                                    textParam("orderbody", messageBody)
-                            )
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("messaging_product", "whatsapp");
+            payload.put("recipient_type", "individual");
+            payload.put("to", phone);
+            payload.put("type", "template");
+
+            Map<String, Object> template = new HashMap<>();
+            template.put("name", "order_info2");
+            template.put("language", Map.of("code", "en"));
+
+            List<Map<String, Object>> components = new ArrayList<>();
+            components.add(Map.of(
+                    "type", "HEADER",
+                    "parameters", List.of(
+                            Map.of("type", "text", "parameter_name", "header", "text", headerText)
                     )
-            );
+            ));
+            components.add(Map.of(
+                    "type", "BODY",
+                    "parameters", List.of(
+                            Map.of("type", "text", "parameter_name", "client_info", "text", clientInfo),
+                            Map.of("type", "text", "parameter_name", "orderbody", "text", orderInline)
+                    )
+            ));
+
+            template.put("components", components);
+            payload.put("template", template);
+
+            try {
+                String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
+                log.info("[WA kitchen template] {}", json);
+            } catch (Exception ignore) {}
+
             postMessages(payload, "sendOrderToKitchenText2");
         }
     }
 
     public void sendReadyMessage(String recipientPhone, String userName, Object userId) {
-        String name = (userName == null || userName.isBlank()) ? "Habibi" : userName;
+        String name = (userName == null ? "Habibi" : userName);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("messaging_product", "whatsapp");
         payload.put("recipient_type", "individual");
         payload.put("to", recipientPhone);
         payload.put("type", "template");
-        payload.put("template", Map.of(
-                "name", "last_confirm",
-                "language", Map.of("code", "en"),
-                "components", List.of(
-                        Map.of("type", "BODY",
-                                "parameters", List.of(textParam("name", name))),
-                        Map.of("type", "BUTTON",
-                                "sub_type", "url",
-                                "index", 0,
-                                "parameters", List.of(Map.of("type", "text", "text", String.valueOf(userId))))
+
+        Map<String, Object> template = new HashMap<>();
+        template.put("name", "last_confirm");
+        template.put("language", Map.of("code", "en"));
+
+        List<Map<String, Object>> components = new ArrayList<>();
+        components.add(Map.of(
+                "type", "BODY",
+                "parameters", List.of(
+                        Map.of("type", "text", "parameter_name", "name", "text", String.valueOf(name))
                 )
         ));
+        components.add(Map.of(
+                "type", "BUTTON",
+                "sub_type", "url",
+                "index", 0,
+                "parameters", List.of(
+                        Map.of("type", "text", "text", String.valueOf(userId))
+                )
+        ));
+
+        template.put("components", components);
+        payload.put("template", template);
+
         postMessages(payload, "sendReadyMessage");
     }
 
     public void sendMenuUtility(String recipientPhone, Object userId) {
-        Map<String, Object> payload = templatePayload(
-                recipientPhone,
-                "name_confirmed22",
-                List.of(
-                        headerParam(null, "Habibi, order online, it's quick & super easy! 🍕"),
-                        bodyParams(textParam(null, "Tested on my grandma😄")),
-                        Map.of("type", "BUTTON",
-                                "sub_type", "url",
-                                "index", 0,
-                                "parameters", List.of(Map.of("type", "text", "text", String.valueOf(userId))))
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messaging_product", "whatsapp");
+        payload.put("recipient_type", "individual");
+        payload.put("to", recipientPhone);
+        payload.put("type", "template");
+
+        Map<String, Object> template = new HashMap<>();
+        template.put("name", "name_confirmed22");
+        template.put("language", Map.of("code", "en"));
+
+        List<Map<String, Object>> components = new ArrayList<>();
+        components.add(Map.of(
+                "type", "HEADER",
+                "parameters", List.of(
+                        Map.of("type", "text", "text", "Habibi, order online, it's quick & super easy! 🍕")
                 )
-        );
+        ));
+        components.add(Map.of(
+                "type", "BODY",
+                "parameters", List.of(
+                        Map.of("type", "text", "text", "Tested on my grandma😄")
+                )
+        ));
+        components.add(Map.of(
+                "type", "BUTTON",
+                "sub_type", "url",
+                "index", 0,
+                "parameters", List.of(
+                        Map.of("type", "text", "text", String.valueOf(userId))
+                )
+        ));
+
+        template.put("components", components);
+        payload.put("template", template);
+
         postMessages(payload, "sendMenuUtility");
     }
 
     public void askForName(String recipientPhone) {
-        Map<String, Object> payload = Map.of(
-                "messaging_product", "whatsapp",
-                "recipient_type", "individual",
-                "to", recipientPhone,
-                "type", "text",
-                "text", Map.of("body",
-                        "Salam Aleikum 👋!\n" +
-                                "I'm Hamoody, IC Pizza Bot 🤖\n" +
-                                "Send me your name so I can share the menu with you 🍕\n")
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messaging_product", "whatsapp");
+        payload.put("recipient_type", "individual");
+        payload.put("to", recipientPhone);
+        payload.put("type", "text");
+        payload.put("text", Map.of(
+                "body",
+                "Salam Aleikum 👋!\n" +
+                        "I'm Hamoody, IC Pizza Bot 🤖\n" +
+                        "Send me your name so I can share the menu with you 🍕\n"
+        ));
+
         postMessages(payload, "askForName");
     }
 
@@ -211,8 +332,6 @@ public class WhatsAppService {
         }
     }
 
-    private static String safe(String s) { return s == null ? "" : s; }
-    private static String fmtMoney(BigDecimal v) { return v == null ? "0.000" : v.setScale(3, BigDecimal.ROUND_HALF_UP).toPlainString(); }
 
     private List<String> kitchenPhones() {
         if (!StringUtils.hasText(props.kitchenPhones())) return List.of();

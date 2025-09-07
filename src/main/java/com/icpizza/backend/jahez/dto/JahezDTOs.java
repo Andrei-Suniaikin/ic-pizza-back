@@ -54,10 +54,8 @@ public class JahezDTOs {
                 return switch (pm) {
                     case CASH -> "Cash";
 
-                    // любые «карты» и POS — в «Card»
                     case CREDITCARD, POS, POS_MADA, POS_CREDIT_CARD, PAYFORT_CREDIT_CARD -> "Card";
 
-                    // любые ApplePay — в «Apple Pay»
                     case APPLE_PAY_MADA, APPLE_PAY_CREDIT_CARD -> "Apple Pay";
                 };
             }
@@ -73,8 +71,8 @@ public class JahezDTOs {
 
     public record JahezStatusUpdateRequest(
             Long jahezOrderId,
-            String status,           // "A" | "R"
-            String reason            // required if R
+            String status,
+            String reason
     ) {}
 
     public record DataForJahezOrder(

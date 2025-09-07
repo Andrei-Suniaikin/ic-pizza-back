@@ -44,7 +44,7 @@ public class MenuService {
     }
 
     private MenuSnapshot buildSnapshot() {
-        List<MenuItem> itemDTOs = menuRepository.findAll().stream()
+        List<MenuItem> itemDTOs = menuRepository.findAllByOrderByIdAsc().stream()
                 .map(menuItem -> MenuItem.builder()
                         .id(menuItem.getId())
                         .category(menuItem.getCategory())

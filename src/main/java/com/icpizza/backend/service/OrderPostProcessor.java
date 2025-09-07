@@ -37,12 +37,12 @@ public class OrderPostProcessor {
         String tel = event.order.getCustomer() != null ? event.order.getCustomer().getTelephoneNo() : null;
         String name = (event.order.getCustomer() != null ? event.order.getCustomer().getName() : null);
         if (tel != null && !tel.isBlank() && !"Unknown customer".equalsIgnoreCase(tel)) {
-            String clientMsg = wa.buildOrderMessage(event.order.getId(), event.items, event.order.getAmountPaid());
-            wa.sendOrderConfirmation(tel, clientMsg, event.order.getAmountPaid(), event.order.getId());
+            String clientMsg = wa.buildOrderMessage(event.items);
+            wa.sendOrderConfirmation(tel, event.order.getOrderNo(),clientMsg, event.order.getAmountPaid());
             tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
         }
 
-        wa.sendOrderToKitchenText2(event.order.getOrderNo().longValue(), kitchenMsg, tel, false, name);
+        wa.sendOrderToKitchenText2(event.order.getOrderNo(), kitchenMsg, tel, false, name);
 
         orderEvents.pushCreated(event.order, event.items);
 
@@ -57,8 +57,7 @@ public class OrderPostProcessor {
         String tel  = event.order.getCustomer() != null ? event.order.getCustomer().getTelephoneNo() : null;
         String name = event.order.getCustomer() != null ? event.order.getCustomer().getName() : null;
 
-        Integer headerNumber = event.order.getOrderNo();
-        wa.sendOrderToKitchenText2(Long.valueOf(headerNumber), kitchenMsg, tel, true, name);
+        wa.sendOrderToKitchenText2(event.order.getOrderNo(), kitchenMsg, tel, true, name);
 
         orderEvents.pushUpdated(event.order, event.items);
     }

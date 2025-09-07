@@ -160,7 +160,6 @@ public class OrderMapper {
 
     private String photoByName(MenuSnapshot snap, String name) {
         if (snap == null || name == null) return "";
-        // используем публичный аксессор списка из снапшота
         return snap.getItems().stream()
                 .filter(mi -> name.equals(mi.getName()))
                 .map(com.icpizza.backend.entity.MenuItem::getPhoto)

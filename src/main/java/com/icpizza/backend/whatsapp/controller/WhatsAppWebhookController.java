@@ -44,14 +44,14 @@ public class WhatsAppWebhookController {
 
                 Optional<Customer> customer = customerService.findCustomer(senderPhone);
                 if (customer.isEmpty()) {
-                    Customer newCustomer = customerService.createWatsappCustomer(senderPhone);        // имя пустое
-                    wa.askForName(senderPhone);               // "Салам! пришлите имя…"
+                    Customer newCustomer = customerService.createWatsappCustomer(senderPhone);
+                    wa.askForName(senderPhone);
                     return ResponseEntity.ok(Map.of("status", "asked for name"));
                 }
 
                 if (customerService.isWaitForName(senderPhone) && !customerService.userHasName(senderPhone)) {
                     Customer customerWithName = customerService.saveUserName(senderPhone, messageText);
-                    wa.sendMenuUtility(senderPhone, customerWithName.getId());          // шлём меню
+                    wa.sendMenuUtility(senderPhone, customerWithName.getId());
                     return ResponseEntity.ok(Map.of("status", "name saved, menu sent"));
                 }
 

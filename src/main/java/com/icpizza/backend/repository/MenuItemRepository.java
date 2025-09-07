@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
@@ -25,4 +27,7 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     @Query("update MenuItem m set m.available = :enabled where lower(m.category) = lower(:category)")
     int updateAvailableByCategoryIgnoreCase(@Param("category") String brickPizzas,
                                             @Param("enabled")Boolean enabled);
+
+    List<MenuItem> findAllByOrderByIdAsc();
+
 }
