@@ -1,6 +1,5 @@
 package com.icpizza.backend.jahez.controller;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
@@ -26,7 +25,7 @@ public class JahezWebhookController {
         System.out.println(body);
         try {
             var payload = objectMapper.treeToValue(body, JahezDTOs.JahezOrderCreatePayload.class);
-            orderService.createJahezOrder(payload); // асинхронно: сохранение, уведомление, дальнейшие действия
+            orderService.createJahezOrder(payload);
         } catch (Exception e) {
             log.error("Jahez create parse error", e); // но ACK всё равно даём
         }

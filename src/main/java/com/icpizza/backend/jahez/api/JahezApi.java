@@ -40,7 +40,7 @@ public class JahezApi {
     }
 
     public Mono<JahezDTOs.AckSuccess> sendAccepted(long jahezOrderId) {
-        var body = Map.of("jahezOrderId", jahezOrderId, "status", "A");
+        var body = Map.of("jahezOrderId", String.valueOf(jahezOrderId), "status", "A");
         return withAuth(h -> webClient.post()
                 .uri("/webhooks/status_update")
                 .headers(dst -> dst.addAll(h))
