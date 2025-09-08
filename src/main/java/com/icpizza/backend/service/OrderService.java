@@ -140,6 +140,7 @@ public class OrderService {
 
     @Transactional
     public Order updateOrderStatus(OrderStatusUpdateTO orderStatusUpdateTO) {
+        log.info("[NEW ORDER]: "+orderStatusUpdateTO+" ");
         if (orderStatusUpdateTO.jahezOrderId() != null) {
             final long extId = orderStatusUpdateTO.jahezOrderId();
             final String st = orderStatusUpdateTO.orderStatus();
@@ -191,7 +192,6 @@ public class OrderService {
                 orderRepo.save(order);
             }
             return order;
-
 
     }
 
