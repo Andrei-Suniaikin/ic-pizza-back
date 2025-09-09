@@ -200,6 +200,8 @@ public class OrderService {
                         .retry(1)
                         .doOnError(e -> log.error("Jahez ACCEPT failed extId={}", extId, e))
                         .subscribe();
+
+                orderEvents.pushAccepted(orderStatusUpdateTO.orderId());
             }
 
             if (orderStatusUpdateTO.orderStatus().equals("Rejected")) {
