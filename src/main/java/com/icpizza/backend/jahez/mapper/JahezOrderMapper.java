@@ -66,11 +66,22 @@ public class JahezOrderMapper {
                     var oid = o.id();
                     if (oid == null || oid.isBlank()) continue;
 
-                    // флаги
-                    if (GARLIC_TRUE.equals(oid))  { garlic = true;  continue; }
-                    if (GARLIC_FALSE.equals(oid)) { garlic = false; continue; }
-                    if (THIN_TRUE.equals(oid))    { thin   = true;  continue; }
-                    if (THIN_FALSE.equals(oid))   { thin   = false; continue; }
+                    if (GARLIC_TRUE.equals(oid) || (m.modifier_id().equals("GARLIC-MOD") && !oid.equals(GARLIC_FALSE))) {
+                        garlic = true;       // любой вариант "с чесноком" -> true
+                        continue;
+                    }
+                    if (GARLIC_FALSE.equals(oid)) {
+                        garlic = false;      // явный "без чеснока"
+                        continue;
+                    }
+                    if (THIN_TRUE.equals(oid)) {
+                        thin = true;
+                        continue;
+                    }
+                    if (THIN_FALSE.equals(oid)) {
+                        thin = false;
+                        continue;
+                    }
 
                     // экстра — только из нашего каталога
                     var ex = extrasByExt.get(oid);
