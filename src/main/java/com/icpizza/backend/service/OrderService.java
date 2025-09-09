@@ -182,8 +182,8 @@ public class OrderService {
     public void updateOrderStatus(OrderStatusUpdateTO orderStatusUpdateTO) {
         log.info("[NEW ORDER]: "+orderStatusUpdateTO+" ");
         if (orderStatusUpdateTO.jahezOrderId() != null
-                && orderStatusUpdateTO.orderStatus().equals("Accepted")
-                || orderStatusUpdateTO.orderStatus().equals("Rejected")) {
+                && (orderStatusUpdateTO.orderStatus().equals("Accepted")
+                || orderStatusUpdateTO.orderStatus().equals("Rejected"))) {
             final long extId = orderStatusUpdateTO.jahezOrderId();
             final String st = orderStatusUpdateTO.orderStatus();
 
@@ -196,7 +196,7 @@ public class OrderService {
                     orderRepo.saveAndFlush(order);
                 }
                 jahezApi.sendAccepted(extId)
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(Duration.ofMinutes(5))
                         .retry(1)
                         .doOnError(e -> log.error("Jahez ACCEPT failed extId={}", extId, e))
                         .subscribe();
@@ -208,7 +208,7 @@ public class OrderService {
 
 
                 jahezApi.sendRejected(extId, reason)
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(Duration.ofMinutes(5))
                         .retry(1)
                         .doOnError(e -> log.error("Jahez REJECT failed extId={}, reason={}", extId, reason, e))
                         .subscribe();
