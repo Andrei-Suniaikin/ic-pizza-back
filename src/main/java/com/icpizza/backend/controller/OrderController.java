@@ -24,9 +24,9 @@ public class OrderController {
     private final OrderEvents orderEvents;
 
     @PostMapping("/status_update")
-    public ResponseEntity<Order> orderStatusUpdate(@RequestBody OrderStatusUpdateTO newStatus){
-        Order order = orderService.updateOrderStatus(newStatus);
-        return new ResponseEntity<>(order, HttpStatus.OK);
+    public ResponseEntity<Void> orderStatusUpdate(@RequestBody OrderStatusUpdateTO newStatus){
+        orderService.updateOrderStatus(newStatus);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/create_order")
