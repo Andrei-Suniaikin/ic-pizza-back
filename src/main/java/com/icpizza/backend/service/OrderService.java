@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -147,6 +148,7 @@ public class OrderService {
                         String nm = safeName(jahezOrder.customer_name());
                         if (nm != null) c.setName(nm);
                         c.setAmountOfOrders(0);
+                        c.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
                         c.setAddress(coordsAsAddress(jahezOrder));
                         c.setAmountPaid(java.math.BigDecimal.ZERO);
                         return customerRepo.save(c);
