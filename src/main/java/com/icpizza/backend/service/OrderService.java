@@ -55,6 +55,22 @@ public class OrderService {
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    static String safeName(String n) {
+        if (n == null) return null;
+        String v = n.trim();
+        if (v.isEmpty()) return null;
+        if ("no data".equalsIgnoreCase(v)) return null;
+        return v;
+    }
+
+    static String coordsAsAddress(JahezDTOs.JahezOrderCreatePayload jahezOrder) {
+        var d = jahezOrder.delivery_address();
+        if (d == null || d.geolocation == null) return "";
+        var g = d.geolocation;
+        if (g.latitude == null || g.longitude == null) return "";
+        return String.format(java.util.Locale.US, "%.6f,%.6f", g.latitude, g.longitude);
+    }
+
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
         Boolean hasTelephone = orderTO.telephoneNo()==null? false: true;
@@ -121,6 +137,30 @@ public class OrderService {
         if (mapped.priceMismatch()) {
             log.warn("[JAHEZ] price mismatch: declared={}, computed={}",
                     mapped.declaredTotal(), mapped.total());
+        }
+
+        if (jahezOrder.phone_number() != null) {
+            Customer customer = customerRepo.findByTelephoneNo(jahezOrder.phone_number())
+                    .orElseGet(() -> {
+                        Customer c = new Customer();
+                        c.setTelephoneNo(jahezOrder.phone_number());
+                        String nm = safeName(jahezOrder.customer_name());
+                        if (nm != null) c.setName(nm);
+                        c.setAmountOfOrders(0);
+                        c.setAddress(coordsAsAddress(jahezOrder));
+                        c.setAmountPaid(java.math.BigDecimal.ZERO);
+                        return customerRepo.save(c);
+                    });
+
+            if ((customer.getName() == null || customer.getName().isBlank())) {
+                String nm = safeName(jahezOrder.customer_name());
+                if (nm != null) customer.setName(nm);
+            }
+
+            order.setCustomer(customer);
+            orderRepo.save(order);
+
+            customerService.updateCustomer(order, customer);
         }
 
         orderEvents.pushCreated(order, mapped.items());
