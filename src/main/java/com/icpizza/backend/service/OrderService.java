@@ -252,6 +252,8 @@ public class OrderService {
             order.setIsPickedUp(true);
 
             orderRepo.save(order);
+
+            orderEvents.pushPickedUp(order.getId());
         }
     }
 
