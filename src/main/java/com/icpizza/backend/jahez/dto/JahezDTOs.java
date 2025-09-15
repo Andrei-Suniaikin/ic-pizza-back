@@ -1,6 +1,7 @@
 package com.icpizza.backend.jahez.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.icpizza.backend.enums.OrderStatus;
 
 import java.math.BigDecimal;
@@ -16,7 +17,10 @@ public class JahezDTOs {
             String notes,
             Long jahez_id,
             PaymentMethod payment_method,
-            Offer offer
+            Offer offer,
+            String phone_number,
+            String customer_name,
+            DeliveryAddress delivery_address
     ) {
         public record Item(
                 String product_id, Integer quantity,
@@ -32,6 +36,16 @@ public class JahezDTOs {
         }
 
         public record Offer(BigDecimal amount, Integer type) {
+        }
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static final class DeliveryAddress {
+            public Geolocation geolocation;
+        }
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static final class Geolocation {
+            public Double longitude;
+            public Double latitude;
         }
 
         public enum PaymentMethod {

@@ -1,7 +1,6 @@
 package com.icpizza.backend.service;
 
 import com.icpizza.backend.cache.MenuSnapshot;
-import com.icpizza.backend.config.TimeConfig;
 import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.MenuItem;
@@ -10,14 +9,13 @@ import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.jahez.api.JahezApi;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
-import com.icpizza.backend.jahez.mapper.JahezOrderItemMapper;
+import com.icpizza.backend.jahez.mapper.JahezOrderMapper;
 import com.icpizza.backend.mapper.OrderMapper;
 import com.icpizza.backend.repository.CustomerRepository;
 import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.repository.TransactionRepository;
 import com.icpizza.backend.websocket.OrderEvents;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -30,7 +28,7 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,7 +46,7 @@ public class OrderService {
     private final OrderEvents orderEvents;
     private final OrderPostProcessor orderPostProcessor;
     Random random = new Random();
-    private final JahezOrderItemMapper jahezOrderItemMapper;
+    private final JahezOrderMapper jahezOrderMapper;
     private final JahezApi jahezApi;
     private final TransactionRepository transactionRepo;
 
@@ -57,6 +55,22 @@ public class OrderService {
     );
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    static String safeName(String n) {
+        if (n == null) return null;
+        String v = n.trim();
+        if (v.isEmpty()) return null;
+        if ("no data".equalsIgnoreCase(v)) return null;
+        return v;
+    }
+
+    static String coordsAsAddress(JahezDTOs.JahezOrderCreatePayload jahezOrder) {
+        var d = jahezOrder.delivery_address();
+        if (d == null || d.geolocation == null) return "";
+        var g = d.geolocation;
+        if (g.latitude == null || g.longitude == null) return "";
+        return String.format(java.util.Locale.US, "%.6f,%.6f", g.latitude, g.longitude);
+    }
 
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
@@ -98,34 +112,59 @@ public class OrderService {
     @Async
     @Transactional
     public void createJahezOrder(JahezDTOs.JahezOrderCreatePayload jahezOrder){
-        try {
-            if (orderRepo.findByExternalId(jahezOrder.jahez_id()).isPresent()) {
-                CompletableFuture.completedFuture(true);
-                return;
+        if (orderRepo.findByExternalId(jahezOrder.jahez_id()).isPresent()) {
+            log.info("[JAHEZ] duplicate create jahez_id={}, skip", jahezOrder.jahez_id());
+            return;
+        }
+
+        Order order = new Order();
+        order.setStatus(OrderStatus.toLabel(OrderStatus.PENDING));
+        order.setOrderNo(random.nextInt(1, 999));
+        order.setAddress(null);
+        order.setExternalId(jahezOrder.jahez_id());
+        order.setNotes(jahezOrder.notes());
+        order.setType("Jahez");
+        order.setCreatedAt(LocalDateTime.now(BAHRAIN));
+        order.setPaymentType(JahezDTOs.JahezOrderCreatePayload.PaymentMethod.toLabel(jahezOrder.payment_method()));
+        orderRepo.saveAndFlush(order);
+
+        var mapped = jahezOrderMapper.map(jahezOrder, order);
+        orderItemRepo.saveAll(mapped.items());
+
+        order.setAmountPaid(mapped.declaredTotal());
+        orderRepo.save(order);
+
+        if (mapped.priceMismatch()) {
+            log.warn("[JAHEZ] price mismatch: declared={}, computed={}",
+                    mapped.declaredTotal(), mapped.total());
+        }
+
+        if (jahezOrder.phone_number() != null) {
+            Customer customer = customerRepo.findByTelephoneNo(jahezOrder.phone_number())
+                    .orElseGet(() -> {
+                        Customer c = new Customer();
+                        c.setTelephoneNo(jahezOrder.phone_number());
+                        String nm = safeName(jahezOrder.customer_name());
+                        if (nm != null) c.setName(nm);
+                        c.setAmountOfOrders(0);
+                        c.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
+                        c.setAddress(coordsAsAddress(jahezOrder));
+                        c.setAmountPaid(java.math.BigDecimal.ZERO);
+                        return customerRepo.save(c);
+                    });
+
+            if ((customer.getName() == null || customer.getName().isBlank())) {
+                String nm = safeName(jahezOrder.customer_name());
+                if (nm != null) customer.setName(nm);
             }
 
-            Order order = new Order();
-            order.setStatus(OrderStatus.toLabel(OrderStatus.PENDING));
-            order.setOrderNo(random.nextInt(1, 999));
-            order.setAddress(null);
-            order.setExternalId(jahezOrder.jahez_id());
-            order.setNotes(jahezOrder.notes());
-            order.setType("Jahez");
-            order.setCreatedAt(LocalDateTime.now(BAHRAIN));
-            order.setPaymentType(JahezDTOs.JahezOrderCreatePayload.PaymentMethod.toLabel(jahezOrder.payment_method()));
-            order.setAmountPaid(jahezOrder.final_price());
-            order.setNotes(jahezOrder.notes());
-
+            order.setCustomer(customer);
             orderRepo.save(order);
 
-            List<OrderItem> items = jahezOrderItemMapper.toOrderItem(jahezOrder, order);
-            orderItemRepo.saveAll(items);
-
-            orderEvents.pushCreated(order, items);
-        } catch (Exception e) {
-            log.error("createJahezOrder failed " + jahezOrder);
-            throw new RuntimeException(e);
+            customerService.updateCustomer(order, customer);
         }
+
+        orderEvents.pushCreated(order, mapped.items());
     }
 
     @Transactional
@@ -139,8 +178,11 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateOrderStatus(OrderStatusUpdateTO orderStatusUpdateTO) {
-        if (orderStatusUpdateTO.jahezOrderId() != null) {
+    public void updateOrderStatus(OrderStatusUpdateTO orderStatusUpdateTO) {
+        log.info("[NEW ORDER]: "+orderStatusUpdateTO+" ");
+        if (orderStatusUpdateTO.jahezOrderId() != null
+                && (orderStatusUpdateTO.orderStatus().equals("Accepted")
+                || orderStatusUpdateTO.orderStatus().equals("Rejected"))) {
             final long extId = orderStatusUpdateTO.jahezOrderId();
             final String st = orderStatusUpdateTO.orderStatus();
 
@@ -153,11 +195,15 @@ public class OrderService {
                     orderRepo.saveAndFlush(order);
                 }
                 jahezApi.sendAccepted(extId)
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(Duration.ofMinutes(5))
                         .retry(1)
                         .doOnError(e -> log.error("Jahez ACCEPT failed extId={}", extId, e))
                         .subscribe();
-                return order;
+
+                orderEvents.pushAccepted(orderStatusUpdateTO.orderId());
+            }
+            else{
+                throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
             }
 
             if (orderStatusUpdateTO.orderStatus().equals("Rejected")) {
@@ -166,7 +212,7 @@ public class OrderService {
 
 
                 jahezApi.sendRejected(extId, reason)
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(Duration.ofMinutes(5))
                         .retry(1)
                         .doOnError(e -> log.error("Jahez REJECT failed extId={}, reason={}", extId, reason, e))
                         .subscribe();
@@ -174,25 +220,45 @@ public class OrderService {
 
                 try { orderItemRepo.deleteByOrderId(order.getId()); } catch (Exception ignore) {}
                 orderRepo.delete(order);
-                return null;
+            }
+            else{
+                throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
             }
 
-            throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
         }
 
         if (orderStatusUpdateTO.orderId() == null) {
             throw new IllegalArgumentException("orderId is required for READY");
         }
 
+        if(orderStatusUpdateTO.orderStatus().equals("Ready")) {
             Order order = orderRepo.findById(orderStatusUpdateTO.orderId())
-                    .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderStatusUpdateTO.orderId()));
-            if (order.getStatus() != OrderStatus.toLabel(OrderStatus.READY)) {
-                order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
-                orderRepo.save(order);
-            }
-            return order;
+                    .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
+                            .formatted(orderStatusUpdateTO.orderId())));
 
+            order.setIsReady(true);
 
+            Integer duration = (int) Math.max(0, Duration.between(order.getCreatedAt(), LocalDateTime.now(BAHRAIN)).getSeconds());
+
+            order.setReadyTimeStamp(duration);
+            order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
+
+            orderRepo.save(order);
+
+            orderPostProcessor.onOrderReady(new OrderPostProcessor.OrderReadyEvent(order));
+        }
+
+        if (orderStatusUpdateTO.orderStatus().equals("Picked Up")){
+            Order order = orderRepo.findById(orderStatusUpdateTO.orderId())
+                    .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
+                            .formatted(orderStatusUpdateTO.orderId())));
+
+            order.setIsPickedUp(true);
+
+            orderRepo.save(order);
+
+            orderEvents.pushPickedUp(order.getId());
+        }
     }
 
     @Transactional
@@ -293,6 +359,7 @@ public class OrderService {
                     o.getStatus(),
                     o.getIsReady(),
                     o.getIsPaid(),
+                    o.getIsPickedUp(),
                     itemTOs
             );
         }).toList();
@@ -383,8 +450,7 @@ public class OrderService {
     }
 
     public Map<String, List<OrderHistoryTO>> getHistory(){
-        List<Order> orders = orderRepo.findReadySince(OrderStatus.toLabel(OrderStatus.READY),
-                                                    LocalDateTime.now(BAHRAIN).minusDays(1));
+        List<Order> orders = orderRepo.findReadySince(LocalDateTime.now(BAHRAIN).minusDays(1));
 
         MenuSnapshot snap = menuService.getMenu();
 

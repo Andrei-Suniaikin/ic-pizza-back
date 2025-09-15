@@ -33,9 +33,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("""
   SELECT o FROM Order o
-  WHERE (o.isPaid = FALSE OR o.isReady = FALSE)
-    AND o.isPaid IS NOT NULL
-    AND o.isReady IS NOT NULL
+  WHERE o.isPickedUp = FALSE
+    AND o.isPickedUp IS NOT NULL
   ORDER BY o.createdAt DESC
 """)
     List<Order> findActiveOrders();
@@ -50,17 +49,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                                         @Param("to") OffsetDateTime to);
 
     @Query("""
-           select o
-           from Order o
-           left join fetch o.customer
-           where o.status = :status
-             and o.createdAt >= :cutoff
-           order by o.createdAt desc
-           """)
-    List<Order> findReadySince(@Param("status") String status,
-                               @Param("cutoff") LocalDateTime cutoff);
+       select o
+       from Order o
+       left join fetch o.customer
+       where o.isPickedUp = true
+         and o.createdAt >= :cutoff
+       order by o.createdAt desc
+       """)
+    List<Order> findReadySince(@Param("cutoff") LocalDateTime cutoff);
 
-    /** Клиенты, чья первая покупка в прошлом месяце (кол-во таких клиентов) */
     @Query(value = """
         SELECT COUNT(*) FROM (
             SELECT o.telephone_no

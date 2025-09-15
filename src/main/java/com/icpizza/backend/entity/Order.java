@@ -35,6 +35,9 @@ public class Order {
     @Column(name = "is_paid")
     private Boolean isPaid=false;
 
+    @Column(name = "is_picked_up")
+    private Boolean isPickedUp=false;
+
     @Column(name = "ready_timestamp")
     private Integer readyTimeStamp=null;
 
