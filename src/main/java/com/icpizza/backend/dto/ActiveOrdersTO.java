@@ -19,6 +19,7 @@ public record ActiveOrdersTO(
         String status,
         Boolean isReady,
         Boolean isPaid,
+        Boolean isPickedUp,
         java.util.List<ActiveOrderItemTO> items
 ) {
     public record ActiveOrderItemTO(
