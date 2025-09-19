@@ -139,31 +139,6 @@ public class OrderService {
                     mapped.declaredTotal(), mapped.total());
         }
 
-        if (jahezOrder.phone_number() != null) {
-            Customer customer = customerRepo.findByTelephoneNo(jahezOrder.phone_number())
-                    .orElseGet(() -> {
-                        Customer c = new Customer();
-                        c.setTelephoneNo(jahezOrder.phone_number());
-                        String nm = safeName(jahezOrder.customer_name());
-                        if (nm != null) c.setName(nm);
-                        c.setAmountOfOrders(0);
-                        c.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
-                        c.setAddress(coordsAsAddress(jahezOrder));
-                        c.setAmountPaid(java.math.BigDecimal.ZERO);
-                        return customerRepo.save(c);
-                    });
-
-            if ((customer.getName() == null || customer.getName().isBlank())) {
-                String nm = safeName(jahezOrder.customer_name());
-                if (nm != null) customer.setName(nm);
-            }
-
-            order.setCustomer(customer);
-            orderRepo.save(order);
-
-            customerService.updateCustomer(order, customer);
-        }
-
         orderEvents.pushCreated(order, mapped.items());
     }
 
@@ -190,6 +165,7 @@ public class OrderService {
                     .orElseThrow(() -> new IllegalArgumentException("Order by jahezId not found: " + extId));
 
             if (orderStatusUpdateTO.orderStatus().equals("Accepted")) {
+                log.info("[JAHEZ] Order with id "+order.getId()+" accepted.");
                 if (!order.getStatus().equals(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE))) {
                     order.setStatus(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE));
                     orderRepo.saveAndFlush(order);
@@ -207,6 +183,7 @@ public class OrderService {
             }
 
             if (orderStatusUpdateTO.orderStatus().equals("Rejected")) {
+                log.info("[JAHEZ] Order with id "+order.getId()+" rejected: "+orderStatusUpdateTO.reason()+".");
                 String reason = (orderStatusUpdateTO.reason() == null || orderStatusUpdateTO.reason().isBlank())
                         ? "Rejected by operator" : orderStatusUpdateTO.reason();
 
@@ -219,6 +196,7 @@ public class OrderService {
 
 
                 try { orderItemRepo.deleteByOrderId(order.getId()); } catch (Exception ignore) {}
+                orderEvents.pushDeleted(order.getId());
                 orderRepo.delete(order);
             }
             else{
@@ -346,6 +324,7 @@ public class OrderService {
 
             return new ActiveOrdersTO(
                     o.getId(),
+                    o.getExternalId(),
                     o.getOrderNo(),
                     o.getType(),
                     o.getAmountPaid(),

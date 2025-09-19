@@ -6,6 +6,7 @@ import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.repository.CustomerRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StatsService {
@@ -29,14 +31,16 @@ public class StatsService {
         LocalDateTime end   = finishDate.plusDays(1).atStartOfDay(BAHRAIN).toLocalDateTime()
                 .plusHours(1).plusMinutes(59).plusSeconds(59);
 
-        var inWindow = orderRepo.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
-
+        BigDecimal totalPickUpRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "Pick Up"));
+        Long pickUpOrders = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "Pick Up");
         long uniqInWindow = orderRepo.countUniqueCustomersInWindow(start, end);
         long newUniq      = orderRepo.countNewUniqueCustomersInWindow(start, end);
         long oldUniq      = Math.max(0, uniqInWindow - newUniq);
-        BigDecimal totalRevenue = orderRepo.sumAmountPaidBetween(start, end);
 
-        BigDecimal sumPaid = nvl(customerRepo.sumAllAmountPaid());
+        long jahezOrders   = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "Jahez");
+        BigDecimal jahezRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "Jahez"));
+
+        BigDecimal sumPaid = nvl(orderRepo.sumAllAmountPaidAllTime());
         long uniqueCustomers = customerRepo.countDistinctTelephoneNo();
         long sumOrders = customerRepo.sumAllAmountOfOrders();
 
@@ -70,10 +74,10 @@ public class StatsService {
         }
 
 
-        System.out.println(start + ", " + end + ", " +  inWindow + ", " + newUniq + ", " + oldUniq);
+        log.info("[STATS] " + start + ", " + end + ", " +  pickUpOrders + ", " + newUniq + ", " + oldUniq);
         return new StatsResponse(
-                totalRevenue.setScale(2, RoundingMode.HALF_UP),
-                inWindow,
+                totalPickUpRevenue.setScale(2, RoundingMode.HALF_UP),
+                pickUpOrders,
                 newUniq,
                 oldUniq,
                 arpu,
@@ -82,7 +86,9 @@ public class StatsService {
                 aov,
                 monthTotal,
                 retained,
-                retentionPct
+                retentionPct,
+                jahezOrders,
+                jahezRevenue
         );
     }
 

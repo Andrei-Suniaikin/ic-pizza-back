@@ -5,10 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 public record StatsResponse(
-        @JsonProperty("total_revenue")
-        BigDecimal totalRevenue,
-        @JsonProperty("total_order_count")
-        Long totalOrderCount,
+        @JsonProperty("pick_up_total_revenue")
+        BigDecimal totalPickUpRevenue,
+        @JsonProperty("pick_up_total_order_count")
+        Long totalPickUpOrderCount,
         @JsonProperty("new_customer_ordered_count")
         Long newCustomerOrderedCount,
         @JsonProperty("old_customer_ordered_count")
@@ -26,6 +26,10 @@ public record StatsResponse(
         @JsonProperty("retained_customers")
         Long retainedCustomers,
         @JsonProperty("retention_percentage")
-        BigDecimal retentionPercentage
+        BigDecimal retentionPercentage,
+        @JsonProperty("jahez_total_order_count")
+        Long totalJahezOrderCount,
+        @JsonProperty("jahez_total_revenue")
+        BigDecimal totalJahezRevenue
 ) {
 }

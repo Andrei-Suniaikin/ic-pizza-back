@@ -6,6 +6,7 @@ import java.sql.Time;
 public record ActiveOrdersTO(
         @JsonProperty("id")
         Long id,
+        Long external_id,
         Integer order_no,
         String order_type,
         java.math.BigDecimal amount_paid,
