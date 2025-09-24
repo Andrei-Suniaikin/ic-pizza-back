@@ -65,9 +65,10 @@ public class CustomerService {
     }
 
     public boolean isWaitForName(String senderPhone) {
-        Optional<Customer> customer = customerRepository.findByTelephoneNo(senderPhone);
-        if(customer.isPresent() && customer.get().getWaitingForName()==1) return true;
-        else return false;
+        return customerRepository.findByTelephoneNo(senderPhone)
+                .map(Customer::getWaitingForName)
+                .map(v -> v == 1)
+                .orElse(false);
     }
 
     public boolean userHasName(String senderPhone) {

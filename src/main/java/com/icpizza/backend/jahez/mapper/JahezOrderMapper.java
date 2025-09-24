@@ -1,9 +1,7 @@
 package com.icpizza.backend.jahez.mapper;
 
-import com.icpizza.backend.entity.ExtraIngr;
-import com.icpizza.backend.entity.MenuItem;
-import com.icpizza.backend.entity.Order;
-import com.icpizza.backend.entity.OrderItem;
+import com.icpizza.backend.entity.*;
+import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
 import com.icpizza.backend.service.MenuService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,8 +26,10 @@ public class JahezOrderMapper {
     private static final String THIN_FALSE   = "THIN-FALSE";
     private static final String PIZZA_PREFIX = "PIZZA-";
 
+    Random random = new Random();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final BigDecimal TOL  = new BigDecimal("0.01");
+    private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
 
     public MappedOrder map(JahezDTOs.JahezOrderCreatePayload in, Order order) {
         var snap        = menuService.getMenu();
@@ -35,6 +37,7 @@ public class JahezOrderMapper {
         var extrasByExt = snap.getExtrasByExternalId();
 
         var resultItems = new ArrayList<OrderItem>();
+        List<ComboItem> allComboItems = new ArrayList<>();
         BigDecimal total = ZERO;
 
         for (var p : nvl(in.products())) {
@@ -42,9 +45,13 @@ public class JahezOrderMapper {
             if (pid == null || pid.isBlank()) continue;
 
             if (pid.startsWith("COMBO-")) {
-                var comboItem = mapCombo(p, order, itemsByExt);
-                resultItems.add(comboItem);
-                total = total.add(comboItem.getAmount());
+                var comboOrderItem = mapCombo(p, order, itemsByExt);
+                resultItems.add(comboOrderItem);
+
+                List<ComboItem> comboParts = buildComboParts(p, comboOrderItem, itemsByExt, extrasByExt);
+                allComboItems.addAll(comboParts);
+
+                total = total.add(comboOrderItem.getAmount());
                 continue;
             }
 
@@ -117,10 +124,22 @@ public class JahezOrderMapper {
             total = total.add(line);
         }
 
-        BigDecimal declared = in.final_price();
-        boolean mismatch = declared != null && declared.subtract(total).abs().compareTo(TOL) > 0;
 
-        return new MappedOrder(resultItems, total, mismatch, declared);
+        return new MappedOrder(resultItems, total, allComboItems);
+    }
+
+    public Order toJahezOrderEntity(JahezDTOs.JahezOrderCreatePayload jahezOrder){
+        Order order = new Order();
+        order.setStatus(OrderStatus.toLabel(OrderStatus.PENDING));
+        order.setOrderNo(random.nextInt(1, 999));
+        order.setAddress(null);
+        order.setExternalId(jahezOrder.jahez_id());
+        order.setNotes(jahezOrder.notes());
+        order.setType("Jahez");
+        order.setCreatedAt(LocalDateTime.now(BAHRAIN));
+        order.setPaymentType(JahezDTOs.JahezOrderCreatePayload.PaymentMethod.toLabel(jahezOrder.payment_method()));
+
+        return order;
     }
 
     private OrderItem mapCombo(JahezDTOs.JahezOrderCreatePayload.Item p,
@@ -131,26 +150,6 @@ public class JahezOrderMapper {
             throw new IllegalArgumentException("Unknown combo product: " + p.product_id());
 
         int qty = def(p.quantity(), 1);
-        boolean garlic = hasOptionId(p, GARLIC_TRUE);
-        boolean thin   = hasOptionId(p, THIN_TRUE);
-
-        var pizzaIds = collectOptionIds(p, id -> id.startsWith(PIZZA_PREFIX));
-        if (pizzaIds.size() > 2) {
-            log.warn("[JAHEZ] combo pizzas >2, truncating: {}", pizzaIds);
-            pizzaIds = pizzaIds.subList(0, 2);
-        }
-
-        var parts = new ArrayList<String>();
-        for (String id : pizzaIds) {
-            var mi = itemsByExt.get(id);
-            String name = (mi != null) ? mi.getName() : humanize(id);
-            var sb = new StringBuilder(name);
-            if (garlic) sb.append(" +Garlic Crust");
-            if (thin)   sb.append(" +Thin");
-            parts.add(sb.toString());
-        }
-
-        String desc = String.join("; ", parts);
 
         OrderItem oi = new OrderItem();
         oi.setOrder(order);
@@ -160,7 +159,6 @@ public class JahezOrderMapper {
         oi.setQuantity(qty);
         oi.setGarlicCrust(false);
         oi.setThinDough(false);
-        oi.setDescription(desc);
         oi.setAmount(combo.getPrice().multiply(BigDecimal.valueOf(qty)));
         oi.setDiscountAmount(ZERO);
         return oi;
@@ -214,12 +212,46 @@ public class JahezOrderMapper {
                 .collect(Collectors.joining(" "));
     }
 
+    private List<ComboItem> buildComboParts(
+            JahezDTOs.JahezOrderCreatePayload.Item comboPayload,
+            OrderItem comboOrderItem,
+            Map<String, MenuItem> itemsByExt,
+            Map<String, ExtraIngr> extrasByExt
+    ) {
+        List<ComboItem> parts = new ArrayList<>();
+
+        var pizzaIds = collectOptionIds(comboPayload, id -> id.startsWith(PIZZA_PREFIX));
+        for (String id : pizzaIds) {
+            var mi = itemsByExt.get(id);
+
+            if (mi == null) {
+                log.warn("[JAHEZ] unknown combo pizza id={}, skip", id);
+                continue;
+            }
+
+            boolean garlic = hasOptionId(comboPayload, GARLIC_TRUE);
+            boolean thin   = hasOptionId(comboPayload, THIN_TRUE);
+
+            ComboItem part = new ComboItem();
+            part.setOrderItem(comboOrderItem);
+            part.setName(mi.getName());
+            part.setCategory(mi.getCategory());
+            part.setSize(mi.getSize());
+            part.setQuantity(1); // внутри комбо обычно 1
+            part.setGarlicCrust(garlic);
+            part.setThinDough(thin);
+            part.setDescription(null);
+
+            parts.add(part);
+        }
+        return parts;
+    }
+
     private record ExtraWithQty(ExtraIngr extra, int qty) {}
 
     public record MappedOrder(
             List<OrderItem> items,
             BigDecimal total,
-            boolean priceMismatch,
-            BigDecimal declaredTotal
+            List<ComboItem> comboItems
     ) {}
 }

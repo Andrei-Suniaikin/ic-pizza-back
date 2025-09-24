@@ -1,5 +1,6 @@
 package com.icpizza.backend.service;
 
+import com.icpizza.backend.entity.ComboItem;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.repository.OrderItemRepository;
@@ -32,12 +33,12 @@ public class OrderPostProcessor {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW,readOnly = true)
     public void onOrderCreated(OrderCreatedEvent event) {
-        String kitchenMsg = wa.buildKitchenMessage(event.items);
+        String kitchenMsg = wa.buildKitchenMessage(event.items, event.comboItems);
 
         String tel = event.order.getCustomer() != null ? event.order.getCustomer().getTelephoneNo() : null;
         String name = (event.order.getCustomer() != null ? event.order.getCustomer().getName() : null);
         if (tel != null && !tel.isBlank() && !"Unknown customer".equalsIgnoreCase(tel)) {
-            String clientMsg = wa.buildOrderMessage(event.items);
+            String clientMsg = wa.buildOrderMessage(event.items, event.comboItems);
             wa.sendOrderConfirmation(tel, event.order.getOrderNo(),clientMsg, event.order.getAmountPaid());
             tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
         }
@@ -52,7 +53,7 @@ public class OrderPostProcessor {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW,readOnly = true)
     public void onOrderEdited(OrderEditedEvent event){
-        String kitchenMsg = wa.buildKitchenMessage(event.items);
+        String kitchenMsg = wa.buildKitchenMessage(event.items, event.comboItems);
 
         String tel  = event.order.getCustomer() != null ? event.order.getCustomer().getTelephoneNo() : null;
         String name = event.order.getCustomer() != null ? event.order.getCustomer().getName() : null;
@@ -71,15 +72,15 @@ public class OrderPostProcessor {
                 wa.sendReadyMessage(orderReadyEvent.order.getCustomer().getTelephoneNo(),
                         orderReadyEvent.order.getCustomer().getName(),
                         orderReadyEvent.order.getCustomer().getId());
-                orderEvents.pushReady(orderReadyEvent.order.getId());
             }
+            orderEvents.pushReady(orderReadyEvent.order.getId());
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
         }
     }
 
-    public record OrderCreatedEvent(Order order, List<OrderItem> items) {}
-    public record OrderEditedEvent(Order order, List<OrderItem> items) {}
+    public record OrderCreatedEvent(Order order, List<OrderItem> items, List<ComboItem> comboItems) {}
+    public record OrderEditedEvent(Order order, List<OrderItem> items, List<ComboItem> comboItems) {}
     public record OrderReadyEvent(
             Order order
     ) {}

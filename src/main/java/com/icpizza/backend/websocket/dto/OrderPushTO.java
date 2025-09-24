@@ -32,6 +32,16 @@ public record OrderPushTO(
             @JsonProperty("isGarlicCrust") boolean isGarlicCrust,
             @JsonProperty("isThinDough") boolean isThinDough,
             @JsonProperty("discount_amount") BigDecimal discountAmount,
-            String photo
-    ) {}
+            String photo,
+            List<ComboItemTO> comboItemTO
+    ) {
+        public record ComboItemTO(
+                String category,
+                String name,
+                String size,
+                Boolean isGarlicCrust,
+                Boolean isThinDough,
+                Integer quantity,
+                String description
+    ){} }
 }

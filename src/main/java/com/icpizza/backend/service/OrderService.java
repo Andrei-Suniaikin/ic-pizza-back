@@ -2,19 +2,13 @@ package com.icpizza.backend.service;
 
 import com.icpizza.backend.cache.MenuSnapshot;
 import com.icpizza.backend.dto.*;
-import com.icpizza.backend.entity.Customer;
-import com.icpizza.backend.entity.MenuItem;
-import com.icpizza.backend.entity.Order;
-import com.icpizza.backend.entity.OrderItem;
+import com.icpizza.backend.entity.*;
 import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.jahez.api.JahezApi;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
 import com.icpizza.backend.jahez.mapper.JahezOrderMapper;
 import com.icpizza.backend.mapper.OrderMapper;
-import com.icpizza.backend.repository.CustomerRepository;
-import com.icpizza.backend.repository.OrderItemRepository;
-import com.icpizza.backend.repository.OrderRepository;
-import com.icpizza.backend.repository.TransactionRepository;
+import com.icpizza.backend.repository.*;
 import com.icpizza.backend.websocket.OrderEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +43,7 @@ public class OrderService {
     private final JahezOrderMapper jahezOrderMapper;
     private final JahezApi jahezApi;
     private final TransactionRepository transactionRepo;
+    private final ComboItemRepository comboItemRepo;
 
     private static final List<String> CATEGORY_ORDER = List.of(
             "Combo Deals", "Brick Pizzas", "Pizzas", "Sides", "Sauces", "Beverages"
@@ -87,11 +82,16 @@ public class OrderService {
             log.info(String.valueOf(order));
 
             List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
-            orderItemRepo.saveAll(orderItems);
+            orderItemRepo.saveAllAndFlush(orderItems);
+
+            log.info("[ORDER ITEMS]"+orderItems.toString()+".");
+            List<ComboItem> comboItems = orderMapper.toComboItems(orderTO, orderItems);
+            if(comboItems!=null) comboItemRepo.saveAllAndFlush(comboItems);
+
 
             customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
 
-            orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems));
+            orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
 
             return orderMapper.toCreateOrderTO(order, orderItems);
         }
@@ -102,9 +102,12 @@ public class OrderService {
         orderRepo.saveAndFlush(order);
 
         List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
-        orderItemRepo.saveAll(orderItems);
+        orderItemRepo.saveAllAndFlush(orderItems);
 
-        orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems));
+        List<ComboItem> comboItems = orderMapper.toComboItems(orderTO, orderItems);
+        if(comboItems!=null) comboItemRepo.saveAllAndFlush(comboItems);
+
+        orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
 
         return orderMapper.toCreateOrderTO(order, orderItems);
     }
@@ -117,52 +120,16 @@ public class OrderService {
             return;
         }
 
-        Order order = new Order();
-        order.setStatus(OrderStatus.toLabel(OrderStatus.PENDING));
-        order.setOrderNo(random.nextInt(1, 999));
-        order.setAddress(null);
-        order.setExternalId(jahezOrder.jahez_id());
-        order.setNotes(jahezOrder.notes());
-        order.setType("Jahez");
-        order.setCreatedAt(LocalDateTime.now(BAHRAIN));
-        order.setPaymentType(JahezDTOs.JahezOrderCreatePayload.PaymentMethod.toLabel(jahezOrder.payment_method()));
+        Order order = jahezOrderMapper.toJahezOrderEntity(jahezOrder);
         orderRepo.saveAndFlush(order);
 
         var mapped = jahezOrderMapper.map(jahezOrder, order);
-        orderItemRepo.saveAll(mapped.items());
+        orderItemRepo.saveAllAndFlush(mapped.items());
 
-        order.setAmountPaid(mapped.declaredTotal());
+        order.setAmountPaid(mapped.total());
         orderRepo.save(order);
 
-        if (mapped.priceMismatch()) {
-            log.warn("[JAHEZ] price mismatch: declared={}, computed={}",
-                    mapped.declaredTotal(), mapped.total());
-        }
-
-        if (jahezOrder.phone_number() != null) {
-            Customer customer = customerRepo.findByTelephoneNo(jahezOrder.phone_number())
-                    .orElseGet(() -> {
-                        Customer c = new Customer();
-                        c.setTelephoneNo(jahezOrder.phone_number());
-                        String nm = safeName(jahezOrder.customer_name());
-                        if (nm != null) c.setName(nm);
-                        c.setAmountOfOrders(0);
-                        c.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
-                        c.setAddress(coordsAsAddress(jahezOrder));
-                        c.setAmountPaid(java.math.BigDecimal.ZERO);
-                        return customerRepo.save(c);
-                    });
-
-            if ((customer.getName() == null || customer.getName().isBlank())) {
-                String nm = safeName(jahezOrder.customer_name());
-                if (nm != null) customer.setName(nm);
-            }
-
-            order.setCustomer(customer);
-            orderRepo.save(order);
-
-            customerService.updateCustomer(order, customer);
-        }
+        if(mapped.comboItems()!=null) comboItemRepo.saveAllAndFlush(mapped.comboItems());
 
         orderEvents.pushCreated(order, mapped.items());
     }
@@ -190,6 +157,7 @@ public class OrderService {
                     .orElseThrow(() -> new IllegalArgumentException("Order by jahezId not found: " + extId));
 
             if (orderStatusUpdateTO.orderStatus().equals("Accepted")) {
+                log.info("[JAHEZ] Order with id "+order.getId()+" accepted.");
                 if (!order.getStatus().equals(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE))) {
                     order.setStatus(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE));
                     orderRepo.saveAndFlush(order);
@@ -207,6 +175,7 @@ public class OrderService {
             }
 
             if (orderStatusUpdateTO.orderStatus().equals("Rejected")) {
+                log.info("[JAHEZ] Order with id "+order.getId()+" rejected: "+orderStatusUpdateTO.reason()+".");
                 String reason = (orderStatusUpdateTO.reason() == null || orderStatusUpdateTO.reason().isBlank())
                         ? "Rejected by operator" : orderStatusUpdateTO.reason();
 
@@ -219,6 +188,7 @@ public class OrderService {
 
 
                 try { orderItemRepo.deleteByOrderId(order.getId()); } catch (Exception ignore) {}
+                orderEvents.pushDeleted(order.getId());
                 orderRepo.delete(order);
             }
             else{
@@ -279,29 +249,25 @@ public class OrderService {
         orderToEdit.setAmountPaid(editOrderTO.amountPaid());
         orderRepo.save(orderToEdit);
 
+        List<Long> orderItemIds = orderItemRepo.findIdsByOrderId(editOrderTO.orderId());
+        comboItemRepo.deleteByOrderItemIds(orderItemIds);
         orderItemRepo.deleteByOrderId(orderToEdit.getId());
-        List<OrderItem> savedItems = orderItemRepo.saveAll(
-                (editOrderTO.items() == null ? List.<EditOrderTO.EditOrderItemTO>of() : editOrderTO.items())
-                        .stream()
-                        .map(it -> {
-                            OrderItem oi = new OrderItem();
-                            oi.setOrder(orderToEdit);
-                            oi.setName(it.name());
-                            oi.setQuantity(it.quantity());
-                            oi.setAmount((it.amount()));
-                            oi.setSize(it.size());
-                            oi.setCategory(it.category());
-                            oi.setGarlicCrust(Boolean.TRUE.equals(it.isGarlicCrust()));
-                            oi.setThinDough(Boolean.TRUE.equals(it.isThinDough()));
-                            oi.setDescription(it.description());
-                            oi.setDiscountAmount(it.discountAmount());
-                            return oi;
-                        }).toList()
-        );
 
+        List<OrderItem> savedItems = orderItemRepo.saveAll(
+                orderMapper.toOrderItems(editOrderTO, orderToEdit)
+        );
         orderItemRepo.saveAll(savedItems);
 
-        orderPostProcessor.onOrderEdited(new OrderPostProcessor.OrderEditedEvent(orderToEdit, savedItems));
+        List<ComboItem> allComboItems = new ArrayList<>();
+        for (int i = 0; i < savedItems.size(); i++) {
+            EditOrderTO.EditOrderItemTO itemTO = editOrderTO.items().get(i);
+            OrderItem savedItem = savedItems.get(i);
+            List<ComboItem> comboItems = orderMapper.toComboItems(itemTO, savedItem);
+            allComboItems.addAll(comboItems);
+        }
+        comboItemRepo.saveAll(allComboItems);
+
+        orderPostProcessor.onOrderEdited(new OrderPostProcessor.OrderEditedEvent(orderToEdit, savedItems, allComboItems));
     }
 
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {
@@ -313,23 +279,46 @@ public class OrderService {
         var itemsByOrder = allItems.stream()
                 .collect(Collectors.groupingBy(oi -> oi.getOrder().getId()));
 
+        List<Long> orderItemIds = allItems.stream()
+                .map(OrderItem::getId)
+                .toList();
+        List<ComboItem> allComboItems = comboItemRepo.findAllByOrderItemIdIn(orderItemIds);
+        var comboItemsByOrderItem = allComboItems.stream()
+                .collect(Collectors.groupingBy(ci -> ci.getOrderItem().getId()));
         var menu = safeMenu();
 
         List<ActiveOrdersTO> result = orders.stream().map(o -> {
             var oiList = itemsByOrder.getOrDefault(o.getId(), List.of());
 
-            List<ActiveOrdersTO.ActiveOrderItemTO> itemTOs = oiList.stream().map(oi -> new ActiveOrdersTO.ActiveOrderItemTO(
-                    oi.getName(),
-                    oi.getQuantity(),
-                    oi.getAmount(),
-                    oi.getSize(),
-                    oi.getCategory(),
-                    oi.isGarlicCrust(),
-                    oi.isThinDough(),
-                    oi.getDescription(),
-                    oi.getDiscountAmount(),
-                    photoByName(menu, oi.getName())
-            )).toList();
+            List<ActiveOrdersTO.ActiveOrderItemTO> itemTOs = oiList.stream().map(oi -> {
+                var comboItems = comboItemsByOrderItem.getOrDefault(oi.getId(), List.of());
+
+                List<ActiveOrdersTO.ActiveOrderItemTO.ActiveComboItemTO> comboTOs = comboItems.stream()
+                        .map(ci -> new ActiveOrdersTO.ActiveOrderItemTO.ActiveComboItemTO(
+                                ci.getName(),
+                                ci.getCategory(),
+                                ci.getSize(),
+                                ci.getQuantity(),
+                                ci.isGarlicCrust(),
+                                ci.isThinDough(),
+                                ci.getDescription()
+                        ))
+                        .toList();
+
+                return new ActiveOrdersTO.ActiveOrderItemTO(
+                        oi.getName(),
+                        oi.getQuantity(),
+                        oi.getAmount(),
+                        oi.getSize(),
+                        oi.getCategory(),
+                        oi.isGarlicCrust(),
+                        oi.isThinDough(),
+                        oi.getDescription(),
+                        oi.getDiscountAmount(),
+                        photoByName(menu, oi.getName()),
+                        comboTOs
+                );
+            }).toList();
 
             BigDecimal sale = itemTOs.stream()
                     .map(ActiveOrdersTO.ActiveOrderItemTO::discountAmount)
@@ -346,6 +335,7 @@ public class OrderService {
 
             return new ActiveOrdersTO(
                     o.getId(),
+                    o.getExternalId(),
                     o.getOrderNo(),
                     o.getType(),
                     o.getAmountPaid(),
@@ -427,7 +417,8 @@ public class OrderService {
         if(transactionRepo.existsByOrder(order)){
             transactionRepo.deleteByOrder(order);
         }
-
+        List<Long> orderItemIds = orderItemRepo.findIdsByOrderId(id);
+        comboItemRepo.deleteByOrderItemIds(orderItemIds);
         orderItemRepo.deleteAllByOrderId(order.getId());
         orderRepo.deleteById(order.getId());
 

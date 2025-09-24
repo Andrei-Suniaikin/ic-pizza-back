@@ -42,6 +42,17 @@ public record CreateOrderTO (
                 boolean isThinDough,
                 String name,
                 Integer quantity,
-                String size
-        ){}
+                String size,
+                List<ComboItemsTO> comboItems
+        ){
+                public record ComboItemsTO(
+                        String category,
+                        String name,
+                        String size,
+                        Boolean isGarlicCrust,
+                        Boolean isThinDough,
+                        Integer quantity,
+                        String description
+                ){}
+        }
 }

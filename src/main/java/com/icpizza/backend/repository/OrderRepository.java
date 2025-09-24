@@ -127,4 +127,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
               and o.createdAt >= :from and o.createdAt <= :to
            """)
     BigDecimal sumCashBetween(LocalDateTime from, LocalDateTime to);
-}
+
+    @Query("SELECT SUM(o.amountPaid) FROM Order o")
+    BigDecimal sumAllAmountPaidAllTime();
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.createdAt BETWEEN :start AND :end AND o.type = :type")
+    long countByCreatedAtBetweenAndOrderType(@Param("start") LocalDateTime start,
+                                             @Param("end") LocalDateTime end,
+                                             @Param("type") String type);
+
+    @Query("SELECT SUM(o.amountPaid) FROM Order o WHERE o.createdAt BETWEEN :start AND :end AND o.type = :type")
+    BigDecimal sumAmountPaidBetweenAndOrderType(@Param("start") LocalDateTime start,
+                                                @Param("end") LocalDateTime end,
+                                                @Param("type") String type);}

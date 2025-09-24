@@ -1,11 +1,15 @@
 package com.icpizza.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.icpizza.backend.entity.ComboItem;
+
 import java.sql.Time;
+import java.util.List;
 
 public record ActiveOrdersTO(
         @JsonProperty("id")
         Long id,
+        Long external_id,
         Integer order_no,
         String order_type,
         java.math.BigDecimal amount_paid,
@@ -32,6 +36,17 @@ public record ActiveOrdersTO(
             boolean isThinDough,
             String description,
             java.math.BigDecimal discountAmount,
-            String photo
-    ) {}
+            String photo,
+            List<ActiveComboItemTO> comboItemTO
+    ) {
+        public record ActiveComboItemTO(
+                String name,
+                String category,
+                String size,
+                Integer quantity,
+                boolean isGarlicCrust,
+                boolean isThinDough,
+                String description
+        ){}
+    }
 }
