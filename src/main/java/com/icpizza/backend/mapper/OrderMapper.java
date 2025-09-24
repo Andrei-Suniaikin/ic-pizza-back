@@ -2,11 +2,15 @@ package com.icpizza.backend.mapper;
 
 import com.icpizza.backend.cache.MenuSnapshot;
 import com.icpizza.backend.dto.CreateOrderTO;
+import com.icpizza.backend.dto.EditOrderTO;
 import com.icpizza.backend.dto.OrderHistoryTO;
+import com.icpizza.backend.entity.ComboItem;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.enums.OrderStatus;
+import com.icpizza.backend.repository.ComboItemRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -19,10 +23,12 @@ import java.util.Optional;
 import java.util.Random;
 
 @Component
+@RequiredArgsConstructor
 public class OrderMapper {
     private static final Logger log = LoggerFactory.getLogger(OrderMapper.class);
     Random random = new Random();
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
+    private final ComboItemRepository comboItemRepository;
 
     public Order toOrderEntity(CreateOrderTO orderTO, Customer customer){
         Order order = new Order();
@@ -62,6 +68,70 @@ public class OrderMapper {
         return orderItems;
     }
 
+    public List<ComboItem> toComboItems(CreateOrderTO orderTO, List<OrderItem> orderItems){
+        List<ComboItem> mappedComboItems = new ArrayList<>();
+        for(int i=0; i< orderTO.orderItems().size(); i++){
+            CreateOrderTO.OrderItemsTO itemTO = orderTO.orderItems().get(i);
+            OrderItem orderItem = orderItems.get(i);
+
+            if(itemTO.comboItems()!=null){
+                List<ComboItem> comboItems = itemTO.comboItems().stream()
+                        .map(comboItemTO -> {
+                            ComboItem comboItem = new ComboItem();
+                            comboItem.setOrderItem(orderItem);
+                            comboItem.setName(comboItemTO.name());
+                            comboItem.setCategory(comboItemTO.category());
+                            comboItem.setSize(comboItemTO.size());
+                            comboItem.setDescription(comboItemTO.description());
+                            comboItem.setQuantity(comboItemTO.quantity());
+                            comboItem.setGarlicCrust(Boolean.TRUE.equals(comboItemTO.isGarlicCrust()));
+                            comboItem.setThinDough(Boolean.TRUE.equals(comboItemTO.isThinDough()));
+                            return comboItem;
+                        }).toList();
+
+                mappedComboItems.addAll(comboItems);
+            }
+        }
+
+        return mappedComboItems;
+    }
+
+    public List<OrderItem> toOrderItems(EditOrderTO editOrderTO, Order order) {
+        if (editOrderTO.items() == null) return List.of();
+
+        return editOrderTO.items().stream().map(it -> {
+            OrderItem oi = new OrderItem();
+            oi.setOrder(order);
+            oi.setName(it.name());
+            oi.setQuantity(it.quantity());
+            oi.setAmount(it.amount());
+            oi.setSize(it.size());
+            oi.setCategory(it.category());
+            oi.setGarlicCrust(Boolean.TRUE.equals(it.isGarlicCrust()));
+            oi.setThinDough(Boolean.TRUE.equals(it.isThinDough()));
+            oi.setDescription(it.description());
+            oi.setDiscountAmount(it.discountAmount());
+            return oi;
+        }).toList();
+    }
+
+    public List<ComboItem> toComboItems(EditOrderTO.EditOrderItemTO itemTO, OrderItem orderItem) {
+        if (itemTO.comboItems() == null) return List.of();
+
+        return itemTO.comboItems().stream().map(ciTO -> {
+            ComboItem ci = new ComboItem();
+            ci.setOrderItem(orderItem);
+            ci.setName(ciTO.name());
+            ci.setCategory(ciTO.category());
+            ci.setSize(ciTO.size());
+            ci.setQuantity(ciTO.quantity());
+            ci.setGarlicCrust(Boolean.TRUE.equals(ciTO.isGarlicCrust()));
+            ci.setThinDough(Boolean.TRUE.equals(ciTO.isThinDough()));
+            ci.setDescription(ciTO.description());
+            return ci;
+        }).toList();
+    }
+
     public CreateOrderTO toCreateOrderTO(Order order, List<OrderItem> items) {
         Customer customer = order.getCustomer();
         String telephoneNo = (customer != null)
@@ -95,6 +165,19 @@ public class OrderMapper {
 
         List<CreateOrderTO.OrderItemsTO> res = new java.util.ArrayList<>(items.size());
         for (OrderItem it : items) {
+            List<CreateOrderTO.OrderItemsTO.ComboItemsTO> comboItemsTOs = comboItemRepository
+                    .findByOrderItemId(it.getId()).stream()
+                    .map(ci -> new CreateOrderTO.OrderItemsTO.ComboItemsTO(
+                            ci.getCategory(),
+                            ci.getName(),
+                            ci.getSize(),
+                            ci.isGarlicCrust(),
+                            ci.isThinDough(),
+                            ci.getQuantity(),
+                            ci.getDescription()
+                    ))
+                    .toList();
+
             res.add(new CreateOrderTO.OrderItemsTO(
                     it.getAmount(),
                     it.getCategory(),
@@ -104,7 +187,8 @@ public class OrderMapper {
                     it.isThinDough(),
                     it.getName(),
                     it.getQuantity() == null ? 0 : it.getQuantity(),
-                    it.getSize()
+                    it.getSize(),
+                    comboItemsTOs
             ));
         }
         return res;
@@ -144,6 +228,19 @@ public class OrderMapper {
     }
 
     public OrderHistoryTO.OrderItemHistoryTO toOrderHistoryItemTO(OrderItem item, MenuSnapshot menu){
+        List<OrderHistoryTO.OrderItemHistoryTO.ComboItemHistoryTO> comboItemHistoryTOS = comboItemRepository.findByOrderItemId(item.getId()).stream()
+                .map(comboItem ->
+                    new OrderHistoryTO.OrderItemHistoryTO.ComboItemHistoryTO(
+                            comboItem.getCategory(),
+                            comboItem.getName(),
+                            comboItem.getSize(),
+                            comboItem.isGarlicCrust(),
+                            comboItem.isThinDough(),
+                            comboItem.getQuantity(),
+                            comboItem.getDescription()
+                    )
+                ).toList();
+
         return new OrderHistoryTO.OrderItemHistoryTO(
                 item.getName(),
                 item.getQuantity(),
@@ -154,7 +251,8 @@ public class OrderMapper {
                 item.isThinDough(),
                 item.getDescription(),
                 item.getDiscountAmount(),
-                photoByName(menu, item.getName())
+                photoByName(menu, item.getName()),
+                comboItemHistoryTOS
         );
     }
 

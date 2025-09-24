@@ -42,6 +42,18 @@ public record EditOrderTO(
             String description,
 
             @JsonProperty("discount_amount")
-            BigDecimal discountAmount
-    ) {}
+            BigDecimal discountAmount,
+
+            List<ComboItemTO> comboItems
+    ) {
+        public record ComboItemTO(
+                String name,
+                String category,
+                String size,
+                Integer quantity,
+                Boolean isGarlicCrust,
+                Boolean isThinDough,
+                String description
+        ) {}
+    }
 }

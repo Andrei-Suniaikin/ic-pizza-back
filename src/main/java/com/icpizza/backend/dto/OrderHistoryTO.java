@@ -28,6 +28,17 @@ public record OrderHistoryTO(
             @JsonProperty("isThinDough") boolean isThinDough,
             String description,
             @JsonProperty("discount_amount") BigDecimal discountAmount,
-            String photo
-    ) {}
+            String photo,
+            List<ComboItemHistoryTO> comboItemTO
+    ) {
+        public record ComboItemHistoryTO(
+                String category,
+                String name,
+                String size,
+                Boolean isGarlicCrust,
+                Boolean isThinDough,
+                Integer quantity,
+                String description
+        ){}
+    }
 }

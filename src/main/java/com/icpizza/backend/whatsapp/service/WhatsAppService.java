@@ -1,7 +1,11 @@
 package com.icpizza.backend.whatsapp.service;
 
+import com.icpizza.backend.entity.ComboItem;
 import com.icpizza.backend.entity.OrderItem;
+import com.icpizza.backend.repository.ComboItemRepository;
 import com.icpizza.backend.whatsapp.config.WhatsAppApiProperties;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -15,11 +19,12 @@ import java.util.*;
 @Service
 public class WhatsAppService {
     private static final Logger log = LoggerFactory.getLogger(WhatsAppService.class);
-
+    private final ComboItemRepository comboItemRepository;
     private final WhatsAppApiProperties props;
     private final RestClient client;
 
-    public WhatsAppService(WhatsAppApiProperties props) {
+    public WhatsAppService(ComboItemRepository comboItemRepository, WhatsAppApiProperties props) {
+        this.comboItemRepository = comboItemRepository;
         this.props = props;
         this.client = RestClient.builder()
                 .baseUrl("https://graph.facebook.com/" + props.version())
@@ -29,7 +34,7 @@ public class WhatsAppService {
     }
 
 
-    public String buildOrderMessage(List<OrderItem> sortedItems) {
+    public String buildOrderMessage(List<OrderItem> sortedItems, List<ComboItem> comboItems) {
         List<String> orderSummaryLines = new ArrayList<>();
 
         for (OrderItem it : sortedItems) {
@@ -41,22 +46,20 @@ public class WhatsAppService {
 
             List<String> detailsBlock = new ArrayList<>();
 
-            if ("Combo Deals".equals(category) && desc.contains(";")) {
-                String[] comboParts = desc.split(";");
-                for (String part : comboParts) {
-                    String[] lines = part.trim().split("\\+");
-                    String main = lines[0].trim();
-                    List<String> extras = new ArrayList<>();
-                    for (int i = 1; i < lines.length; i++) {
-                        String x = lines[i].trim();
-                        if (!x.isEmpty()) extras.add("+" + x);
-                    }
+            if ("Combo Deals".equals(category) && !comboItems.isEmpty()) {
+                for (ComboItem item : comboItems) {
                     StringBuilder formatted = new StringBuilder();
-                    formatted.append("    *").append(main).append("*\n");
-                    for (int i = 0; i < extras.size(); i++) {
-                        formatted.append("      ").append(extras.get(i));
-                        if (i < extras.size() - 1) formatted.append("\n");
+                    formatted.append("    • ").append(item.getName());
+                    List<String> extras = new ArrayList<>();
+
+                    if(Boolean.TRUE.equals(item.isThinDough())) extras.add("Thin Dough");
+                    if(Boolean.TRUE.equals(item.isGarlicCrust())) extras.add("Garlic Crust");
+                    if(!item.getDescription().isEmpty()) extras.add(item.getDescription());
+
+                    if (!extras.isEmpty()) {
+                        formatted.append(" + ").append(String.join(" + ", extras));
                     }
+
                     detailsBlock.add(formatted.toString());
                 }
             } else {
@@ -142,7 +145,7 @@ public class WhatsAppService {
         postMessages(payload, "sendOrderConfirmation");
     }
 
-    public String buildKitchenMessage(List<OrderItem> sortedItems) {
+    public String buildKitchenMessage(List<OrderItem> sortedItems, List<ComboItem> comboItems) {
         List<String> parts = new ArrayList<>();
 
         for (OrderItem it : sortedItems) {
@@ -150,17 +153,62 @@ public class WhatsAppService {
             String name = it.getName() == null ? "" : it.getName();
             String size = it.getSize() == null ? "" : it.getSize();
             String desc = it.getDescription() == null ? "" : it.getDescription();
+            String category = it.getCategory() == null ? "" : it.getCategory();
 
-            List<String> details = new ArrayList<>();
-            String[] pieces = desc.split("\\+");
-            for (String p : pieces) {
-                String x = p.trim();
-                if (!x.isEmpty() && !"'".equals(x)) details.add(x);
+            if ("Combo Deals".equals(category) && !comboItems.isEmpty()) {
+                log.info("[ITEM ID] "+it.getId()+".");
+                log.info("[COMBO ITEMS] "+comboItems.toString()+".");
+
+                List<String> comboLines = new ArrayList<>();
+                for (ComboItem ci : comboItems) {
+                    StringBuilder line = new StringBuilder();
+                    line.append(ci.getName());
+
+                    if (ci.getSize() != null && !ci.getSize().isBlank()) {
+                        line.append(" (").append(ci.getSize()).append(")");
+                    }
+
+                    List<String> extras = new ArrayList<>();
+                    if (Boolean.TRUE.equals(ci.isThinDough())) extras.add("Thin Dough");
+                    if (Boolean.TRUE.equals(ci.isGarlicCrust())) extras.add("Garlic Crust");
+
+                    if (ci.getDescription() != null && !ci.getDescription().isBlank()) {
+                        Arrays.stream(ci.getDescription().split("\\+"))
+                                .map(String::trim)
+                                .filter(s -> !s.isEmpty())
+                                .forEach(extras::add);
+                    }
+
+                    if (!extras.isEmpty()) {
+                        line.append(" + ").append(String.join(" + ", extras));
+                    }
+
+                    comboLines.add(line.toString());
+                }
+
+                // пример: "1x - *Pizza Combo (M)* -> [BBQ Chicken Ranch (M) + Thin Dough, Water, BBQ Sauce]"
+                String part = qty + "x - *" + name + "* (" + size + ") -> " + String.join(", ", comboLines);
+                parts.add(part);
+
+            } else {
+                // обычный айтем
+                List<String> extras = new ArrayList<>();
+                if (Boolean.TRUE.equals(it.isThinDough())) extras.add("Thin Dough");
+                if (Boolean.TRUE.equals(it.isGarlicCrust())) extras.add("Garlic Crust");
+
+                if (!desc.isBlank()) {
+                    Arrays.stream(desc.split("\\+"))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .forEach(extras::add);
+                }
+
+                String descText = extras.isEmpty() ? "" : " + " + String.join(" + ", extras);
+                String part = qty + "x - *" + name + "* (" + size + ")" + descText;
+                parts.add(part);
             }
-            String descText = details.isEmpty() ? "" : " (" + String.join(" + ", details) + ")";
-            String part = qty + "x - *" + name + "* (" + size + ")" + descText;
-            parts.add(part);
         }
+
 
         return String.join(" | ", parts);
     }
