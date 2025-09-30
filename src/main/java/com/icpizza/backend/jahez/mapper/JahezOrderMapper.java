@@ -25,11 +25,25 @@ public class JahezOrderMapper {
     private static final String THIN_TRUE    = "THIN-TRUE";
     private static final String THIN_FALSE   = "THIN-FALSE";
     private static final String PIZZA_PREFIX = "PIZZA-";
+    private static final Set<String> BEVERAGE_IDS = Set.of(
+            "COCA-COLA-S",
+            "COCA-COLA-ZERO-S",
+            "7UP-S",
+            "7UP-DIET-S",
+            "FANTA-ORANGE-S",
+            "WATER-S",
+            "KINZA-COLA-S",
+            "MIRINDA-CITRUS-S"
+    );
 
     Random random = new Random();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final BigDecimal TOL  = new BigDecimal("0.01");
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
+
+    public Boolean isBeverageId(String id){
+        return BEVERAGE_IDS.contains(id);
+    }
 
     public MappedOrder map(JahezDTOs.JahezOrderCreatePayload in, Order order) {
         var snap        = menuService.getMenu();
@@ -241,6 +255,54 @@ public class JahezOrderMapper {
             part.setGarlicCrust(garlic);
             part.setThinDough(thin);
             part.setDescription(null);
+
+            parts.add(part);
+        }
+        List<String> brickIds = collectOptionIds(comboPayload, id -> id.endsWith("-BRICK"));
+        for(String id: brickIds){
+            MenuItem mi = itemsByExt.get(id);
+            if(mi==null){
+                log.warn("[JAHEZ] unknown brick, skipped" + id);
+                continue;
+            }
+
+            ComboItem part = new ComboItem();
+            part.setOrderItem(comboOrderItem);
+            part.setName(mi.getName());
+            part.setCategory(mi.getCategory());
+            part.setQuantity(1);
+
+            parts.add(part);
+        }
+        var sauceIds = collectOptionIds(comboPayload, id -> id.endsWith("-SAUCE"));
+        for (String id: sauceIds){
+            MenuItem mi = itemsByExt.get(id);
+            if(mi==null){
+                log.warn("[JAHEZ] unknown sauce, skipped" + id);
+                continue;
+            }
+
+            ComboItem part = new ComboItem();
+            part.setOrderItem(comboOrderItem);
+            part.setName(mi.getName());
+            part.setCategory(mi.getCategory());
+            part.setQuantity(1);
+
+            parts.add(part);
+        }
+        List<String> beverageIds = collectOptionIds(comboPayload, this::isBeverageId);
+        for(String id: beverageIds){
+            MenuItem mi = itemsByExt.get(id);
+            if(mi==null){
+                log.warn("[JAHEZ] unknown beverage, skipped" + id);
+                continue;
+            }
+
+            ComboItem part = new ComboItem();
+            part.setOrderItem(comboOrderItem);
+            part.setName(mi.getName());
+            part.setCategory(mi.getCategory());
+            part.setQuantity(1);
 
             parts.add(part);
         }

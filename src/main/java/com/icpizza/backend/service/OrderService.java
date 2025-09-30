@@ -22,7 +22,6 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -149,7 +148,7 @@ public class OrderService {
         log.info("[NEW ORDER]: "+orderStatusUpdateTO+" ");
         if (orderStatusUpdateTO.jahezOrderId() != null
                 && (orderStatusUpdateTO.orderStatus().equals("Accepted")
-                || orderStatusUpdateTO.orderStatus().equals("Rejected"))) {
+                || orderStatusUpdateTO.orderStatus().equals("Cancelled"))) {
             final long extId = orderStatusUpdateTO.jahezOrderId();
             final String st = orderStatusUpdateTO.orderStatus();
 
@@ -170,11 +169,7 @@ public class OrderService {
 
                 orderEvents.pushAccepted(orderStatusUpdateTO.orderId());
             }
-            else{
-                throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
-            }
-
-            if (orderStatusUpdateTO.orderStatus().equals("Rejected")) {
+            else if (orderStatusUpdateTO.orderStatus().equals("Cancelled")) {
                 log.info("[JAHEZ] Order with id "+order.getId()+" rejected: "+orderStatusUpdateTO.reason()+".");
                 String reason = (orderStatusUpdateTO.reason() == null || orderStatusUpdateTO.reason().isBlank())
                         ? "Rejected by operator" : orderStatusUpdateTO.reason();
@@ -186,15 +181,16 @@ public class OrderService {
                         .doOnError(e -> log.error("Jahez REJECT failed extId={}, reason={}", extId, reason, e))
                         .subscribe();
 
-
+                List<Long> orderItemIds = orderItemRepo.findIdsByOrderId(order.getId());
+                if(!orderItemIds.isEmpty()) comboItemRepo.deleteByOrderItemIds(orderItemIds);
                 try { orderItemRepo.deleteByOrderId(order.getId()); } catch (Exception ignore) {}
-                orderEvents.pushDeleted(order.getId());
                 orderRepo.delete(order);
+
+                orderEvents.pushDeleted(order.getId());
             }
-            else{
+            else {
                 throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
             }
-
         }
 
         if (orderStatusUpdateTO.orderId() == null) {
