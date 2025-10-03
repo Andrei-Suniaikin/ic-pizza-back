@@ -68,7 +68,7 @@ public class OrderService {
 
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
-        Boolean hasTelephone = orderTO.telephoneNo()==null? false: true;
+        boolean hasTelephone = orderTO.telephoneNo()==null? false: true;
         log.info(String.valueOf(orderTO));
 
         if (hasTelephone){
