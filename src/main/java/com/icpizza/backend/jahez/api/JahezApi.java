@@ -1,8 +1,11 @@
 package com.icpizza.backend.jahez.api;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.icpizza.backend.jahez.config.JahezProperties;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -12,9 +15,11 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JahezApi {
@@ -73,5 +78,22 @@ public class JahezApi {
                 )
                 .bodyToMono(JahezDTOs.AckSuccess.class)
         );
+    }
+
+    public void pushMenuToJahez(JsonNode payload) {
+        try {
+            JahezDTOs.AckSuccess resp = withAuth(h ->
+                    webClient.post()
+                            .uri("/products/products_upload")
+                            .headers(dst -> dst.addAll(h))
+                            .bodyValue(payload)
+                            .retrieve()
+                            .bodyToMono(JahezDTOs.AckSuccess.class)
+            ).block();
+
+            log.info("Successfully pushed menu to Jahez: {}", resp);
+        } catch (Exception e) {
+            log.error("Failed to push menu to Jahez", e);
+        }
     }
 }
