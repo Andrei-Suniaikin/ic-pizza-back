@@ -43,28 +43,14 @@ public class OrderService {
     private final JahezApi jahezApi;
     private final TransactionRepository transactionRepo;
     private final ComboItemRepository comboItemRepo;
+    private final OrderPriorityService orderPriorityService;
+
 
     private static final List<String> CATEGORY_ORDER = List.of(
             "Combo Deals", "Brick Pizzas", "Pizzas", "Sides", "Sauces", "Beverages"
     );
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    static String safeName(String n) {
-        if (n == null) return null;
-        String v = n.trim();
-        if (v.isEmpty()) return null;
-        if ("no data".equalsIgnoreCase(v)) return null;
-        return v;
-    }
-
-    static String coordsAsAddress(JahezDTOs.JahezOrderCreatePayload jahezOrder) {
-        var d = jahezOrder.delivery_address();
-        if (d == null || d.geolocation == null) return "";
-        var g = d.geolocation;
-        if (g.latitude == null || g.longitude == null) return "";
-        return String.format(java.util.Locale.US, "%.6f,%.6f", g.latitude, g.longitude);
-    }
 
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
@@ -91,6 +77,7 @@ public class OrderService {
             customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
 
             orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
+            orderPriorityService.appendIfAbsent(order.getId());
 
             return orderMapper.toCreateOrderTO(order, orderItems);
         }
@@ -129,6 +116,7 @@ public class OrderService {
         orderRepo.save(order);
 
         if(mapped.comboItems()!=null) comboItemRepo.saveAllAndFlush(mapped.comboItems());
+        orderPriorityService.appendIfAbsent(order.getId());
 
         orderEvents.pushCreated(order, mapped.items());
     }
@@ -185,6 +173,7 @@ public class OrderService {
                 if(!orderItemIds.isEmpty()) comboItemRepo.deleteByOrderItemIds(orderItemIds);
                 try { orderItemRepo.deleteByOrderId(order.getId()); } catch (Exception ignore) {}
                 orderRepo.delete(order);
+                orderPriorityService.remove(order.getId());
 
                 orderEvents.pushDeleted(order.getId());
             }
@@ -222,6 +211,7 @@ public class OrderService {
             order.setIsPickedUp(true);
 
             orderRepo.save(order);
+            orderPriorityService.remove(order.getId());
 
             orderEvents.pushPickedUp(order.getId());
         }
@@ -268,7 +258,29 @@ public class OrderService {
 
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {
         List<Order> orders = orderRepo.findActiveOrders();
+        List<Long> priority = orderPriorityService.currentOrder();
+        Map<Long, Integer> pos = new HashMap<>(priority.size() * 2);
         if (orders.isEmpty()) return Map.of("orders", List.of());
+
+        orders.sort((a, b) -> {
+            Integer ia = pos.get(a.getId());
+            Integer ib = pos.get(b.getId());
+            if (ia != null && ib != null) return Integer.compare(ia, ib);
+            if (ia != null) return -1;
+            if (ib != null) return 1;
+
+            var ca = a.getCreatedAt();
+            var cb = b.getCreatedAt();
+            if (ca != null && cb != null) {
+                int byCreated = ca.compareTo(cb);
+                if (byCreated != 0) return byCreated;
+            } else if (ca != null) {
+                return -1;
+            } else if (cb != null) {
+                return 1;
+            }
+            return a.getId().compareTo(b.getId());
+        });
 
         var ids = orders.stream().map(Order::getId).toList();
         var allItems = orderItemRepo.findByOrderIdIn(ids);
@@ -379,24 +391,6 @@ public class OrderService {
     }
 
     @Transactional
-    public void markOrderReady(MarkOrderReadyTO markOrderReadyTO) {
-        Order order = orderRepo.findById(markOrderReadyTO.id())
-                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
-                        .formatted(markOrderReadyTO.id())));
-
-        order.setIsReady(true);
-
-        Integer duration = (int) Math.max(0, Duration.between(order.getCreatedAt(), LocalDateTime.now(BAHRAIN)).getSeconds());
-
-        order.setReadyTimeStamp(duration);
-        order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
-
-        orderRepo.save(order);
-
-        orderPostProcessor.onOrderReady(new OrderPostProcessor.OrderReadyEvent(order));
-    }
-
-    @Transactional
     public String deleteOrder(String orderId) {
         long id;
         try {
@@ -429,6 +423,10 @@ public class OrderService {
         }
 
         return "Order "+orderId+" was successfully deleted";
+    }
+
+    public void updatePriority(List<Long> orders) {
+        orderEvents.pushUpdatedPriority(orderPriorityService.replaceAll(orders));
     }
 
     public final class Bd {

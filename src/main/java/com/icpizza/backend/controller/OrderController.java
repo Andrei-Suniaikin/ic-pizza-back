@@ -2,6 +2,7 @@ package com.icpizza.backend.controller;
 
 import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.Order;
+import com.icpizza.backend.service.OrderPriorityService;
 import com.icpizza.backend.service.OrderService;
 import com.icpizza.backend.websocket.OrderEvents;
 import com.icpizza.backend.websocket.dto.OrderAckTO;
@@ -61,17 +62,6 @@ public class OrderController {
                 HttpStatus.OK);
     }
 
-    @PutMapping("/ready_action")
-    public ResponseEntity<Map<String, String>> markOrderReady(@RequestBody MarkOrderReadyTO markOrderReadyTO){
-        log.info(String.valueOf(markOrderReadyTO));
-
-        orderService.markOrderReady(markOrderReadyTO);
-
-        return new ResponseEntity<>(Map.of("Response" , "Order with ID: "
-                +markOrderReadyTO.id()+" marked as: Ready") ,
-                HttpStatus.OK);
-    }
-
     @MessageMapping("/orders/ack")
     public void ack(OrderAckTO ack) {
         orderEvents.handleAck(ack);
@@ -80,5 +70,12 @@ public class OrderController {
     @DeleteMapping("/delete_order")
     public ResponseEntity<String> deleteOrder(@RequestParam String orderId){
         return new ResponseEntity<>(orderService.deleteOrder(orderId), HttpStatus.OK);
+    }
+
+    @PostMapping("/priority_update")
+    public ResponseEntity<Void> updatePriority(@RequestBody PriorityUpdateRequest request){
+        log.info("[PRIORITY UPDATE] "+request+"");
+        orderService.updatePriority(request.orders());
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

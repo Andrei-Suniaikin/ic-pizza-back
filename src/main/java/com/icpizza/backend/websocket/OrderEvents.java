@@ -17,21 +17,25 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
 public class OrderEvents {
     private final SimpMessagingTemplate ws;
     private final WebsocketOrderMapper pushMapper;
-    private final OrderItemRepository orderItemRepo;
     private final MenuService menuService;
     private final @Qualifier("orderAckScheduler") ThreadPoolTaskScheduler scheduler;
 
     private final Map<Long, ScheduledFuture<?>> pending = new ConcurrentHashMap<>();
     private final Map<Long, Integer> attempts = new ConcurrentHashMap<>();
-    private static final int MAX_ATTEMPTS = 2;
+    private final Map<List<Long>, Integer> priorityAttempts = new ConcurrentHashMap<>();
+    private final Map<List<Long>, ScheduledFuture<?>> priorityPending = new ConcurrentHashMap<>();
 
+    private static final int MAX_ATTEMPTS = 2;
     public void pushCreated(Order order, List<OrderItem> orderItems) {
         MenuSnapshot snap = menuService.getMenu();
         OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
@@ -180,4 +184,25 @@ public class OrderEvents {
         pending.put(id, future);
     }
     private void noop() {}
+
+    public void pushUpdatedPriority(List<Long> priority) {
+        String dest = "/topic/priority-changed";
+        ws.convertAndSend(dest, priority);
+
+        priorityAttempts.putIfAbsent(priority, 0);
+        ScheduledFuture<?> future = scheduler.schedule(() -> {
+            int prev = priorityAttempts.getOrDefault(priority, 0);
+            if (prev >= MAX_ATTEMPTS) {
+                priorityPending.remove(priority);
+                priorityAttempts.remove(priority);
+                return;
+            }
+            priorityAttempts.put(priority, prev + 1);
+            ws.convertAndSend(dest, priority);
+            ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
+            priorityPending.put(priority, again);
+        }, new java.util.Date(System.currentTimeMillis() + 3000));
+
+        priorityPending.put(priority, future);
+    }
 }

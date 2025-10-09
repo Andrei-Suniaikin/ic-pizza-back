@@ -21,4 +21,12 @@ public class CacheConfig {
         );
         return mgr;
     }
+
+    @Bean
+    public com.github.benmanes.caffeine.cache.Cache<String, java.util.List<Long>> ordersPriorityCache() {
+        return com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                .maximumSize(1)
+                .recordStats()
+                .build();
+    }
 }
