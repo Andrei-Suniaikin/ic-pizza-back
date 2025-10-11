@@ -30,7 +30,8 @@ public record CreateOrderTO (
         String notes,
         String address,
         Boolean isPaid,
-        Boolean isReady
+        Boolean isReady,
+        Integer branchNumber
 ){
         public record OrderItemsTO(
                 BigDecimal amount,

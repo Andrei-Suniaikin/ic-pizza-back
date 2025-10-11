@@ -1,8 +1,10 @@
 package com.icpizza.backend.whatsapp.service;
 
 import com.icpizza.backend.entity.ComboItem;
+import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.repository.ComboItemRepository;
+import com.icpizza.backend.service.BranchService;
 import com.icpizza.backend.whatsapp.config.WhatsAppApiProperties;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +21,10 @@ import java.util.*;
 @Service
 public class WhatsAppService {
     private static final Logger log = LoggerFactory.getLogger(WhatsAppService.class);
-    private final ComboItemRepository comboItemRepository;
     private final WhatsAppApiProperties props;
     private final RestClient client;
 
-    public WhatsAppService(ComboItemRepository comboItemRepository, WhatsAppApiProperties props) {
-        this.comboItemRepository = comboItemRepository;
+    public WhatsAppService(ComboItemRepository comboItemRepository, WhatsAppApiProperties props, BranchService branchService) {
         this.props = props;
         this.client = RestClient.builder()
                 .baseUrl("https://graph.facebook.com/" + props.version())
@@ -96,15 +96,72 @@ public class WhatsAppService {
         return String.join("\n", orderSummaryLines);
     }
 
-    public void sendOrderConfirmation(String telephoneNo, Integer orderNo, String orderItems, BigDecimal totalAmount) {
+    public void sendEstimation(String telephoneNo, int estimation, Long orderId) {
+        String estimationText = estimation + " min ⏱\uFE0F";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messaging_product", "whatsapp");
+        payload.put("to", telephoneNo);
+        payload.put("recipient_type", "individual");
+        payload.put("type", "template");
+
+        java.util.Map<String, Object> template = new java.util.HashMap<>();
+        template.put("name", "estimation");
+        template.put("language", java.util.Map.of("code", "en"));
+
+        List<java.util.Map<String, Object>> components = new java.util.ArrayList<>();
+
+        components.add(java.util.Map.of(
+                "type", "HEADER",
+                "parameters", java.util.List.of(
+                        java.util.Map.of("type", "text", "parameter_name", "time", "text", estimationText)
+                )
+        ));
+
+        components.add(java.util.Map.of(
+                "type", "BUTTON",
+                "sub_type", "url",
+                "index", 0,
+                "parameters", List.of(
+                        Map.of("type", "text", "text", String.valueOf(orderId))
+                )
+        ));
+
+        template.put("components", components);
+        payload.put("template", template);
+
+        try {
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
+            log.info("[WA client template] {}", json);
+        } catch (Exception ignore) {}
+
+        postMessages(payload, "sendOrderEstimation");
+    }
+
+    public void sendOrderReady(String telephoneNo) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messaging_product", "whatsapp");
+        payload.put("to", telephoneNo);
+        payload.put("recipient_type", "individual");
+        payload.put("type", "template");
+
+        java.util.Map<String, Object> template = new java.util.HashMap<>();
+        template.put("name", "orderready");
+        template.put("language", java.util.Map.of("code", "en"));
+
+        payload.put("template", template);
+
+        postMessages(payload, "sendOrderReady");
+    }
+
+    public void sendOrderConfirmation(String telephoneNo, Order order, String orderItems) {
         final java.util.function.UnaryOperator<String> clean = v ->
                 v == null ? "" : v.replaceAll("[\\r\\n\\t]+", " ")
                         .replaceAll(" {5,}", "    ")
                         .trim();
 
-        String headerText = clean.apply("✅Got it! Your order " + orderNo + " is confirmed!");
+        String headerText = clean.apply("✅Got it! Your order " + order.getOrderNo() + " is confirmed!");
 
-        String totalParam = clean.apply(totalAmount.setScale(3, java.math.RoundingMode.HALF_UP).toPlainString());
+        String totalParam = clean.apply(order.getAmountPaid().setScale(3, java.math.RoundingMode.HALF_UP).toPlainString());
         String itemsInline = clean.apply(orderItems);
 
         java.util.Map<String, Object> payload = new java.util.HashMap<>();
@@ -367,6 +424,7 @@ public class WhatsAppService {
     }
 
     private void postMessages(Map<String, Object> payload, String op) {
+        log.info("[WA] sending message, payload: " + payload);
         String path = "/" + props.phoneNumberId() + "/messages";
         try {
             String body = client.post()

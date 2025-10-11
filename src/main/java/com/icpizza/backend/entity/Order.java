@@ -50,6 +50,9 @@ public class Order {
     @Column(name = "amount_paid", precision = 38, scale = 2)
     private BigDecimal amountPaid;
 
+    @Column(name="estimation")
+    private Integer estimation;
+
     @Column(name = "notes", length = 255)
     private String notes;
 
@@ -61,4 +64,8 @@ public class Order {
 
     @Column(name = "external_id")
     private Long externalId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id", nullable = true)
+    private Branch branch;
 }

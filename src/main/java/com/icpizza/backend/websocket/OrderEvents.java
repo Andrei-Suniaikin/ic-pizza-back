@@ -1,6 +1,7 @@
 package com.icpizza.backend.websocket;
 
 import com.icpizza.backend.cache.MenuSnapshot;
+import com.icpizza.backend.dto.UpdateWorkLoadLevelTO;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.repository.OrderItemRepository;
@@ -24,7 +25,6 @@ import java.util.concurrent.ScheduledFuture;
 public class OrderEvents {
     private final SimpMessagingTemplate ws;
     private final WebsocketOrderMapper pushMapper;
-    private final OrderItemRepository orderItemRepo;
     private final MenuService menuService;
     private final @Qualifier("orderAckScheduler") ThreadPoolTaskScheduler scheduler;
 

@@ -38,33 +38,17 @@ public class OrderService {
     private final MenuService menuService;
     private final OrderEvents orderEvents;
     private final OrderPostProcessor orderPostProcessor;
-    Random random = new Random();
     private final JahezOrderMapper jahezOrderMapper;
     private final JahezApi jahezApi;
     private final TransactionRepository transactionRepo;
     private final ComboItemRepository comboItemRepo;
+    private final BranchService branchService;
 
     private static final List<String> CATEGORY_ORDER = List.of(
             "Combo Deals", "Brick Pizzas", "Pizzas", "Sides", "Sauces", "Beverages"
     );
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    static String safeName(String n) {
-        if (n == null) return null;
-        String v = n.trim();
-        if (v.isEmpty()) return null;
-        if ("no data".equalsIgnoreCase(v)) return null;
-        return v;
-    }
-
-    static String coordsAsAddress(JahezDTOs.JahezOrderCreatePayload jahezOrder) {
-        var d = jahezOrder.delivery_address();
-        if (d == null || d.geolocation == null) return "";
-        var g = d.geolocation;
-        if (g.latitude == null || g.longitude == null) return "";
-        return String.format(java.util.Locale.US, "%.6f,%.6f", g.latitude, g.longitude);
-    }
 
     @Transactional
     public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
@@ -77,13 +61,17 @@ public class OrderService {
 
 
             Order order = orderMapper.toOrderEntity(orderTO, customer);
+            branchService.recalcBranchWorkload(order.getBranch());
+            order.setEstimation(branchService.getEstimationByBranch(order.getBranch()));
             orderRepo.saveAndFlush(order);
             log.info(String.valueOf(order));
 
             List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
             orderItemRepo.saveAllAndFlush(orderItems);
 
-            log.info("[ORDER ITEMS]"+orderItems.toString()+".");
+
+
+            log.info("[ORDER ITEMS]"+ orderItems+".");
             List<ComboItem> comboItems = orderMapper.toComboItems(orderTO, orderItems);
             if(comboItems!=null) comboItemRepo.saveAllAndFlush(comboItems);
 
@@ -98,6 +86,8 @@ public class OrderService {
         Customer customer = null;
 
         Order order = orderMapper.toOrderEntity(orderTO, customer);
+        branchService.recalcBranchWorkload(order.getBranch());
+        order.setEstimation(branchService.getEstimationByBranch(order.getBranch()));
         orderRepo.saveAndFlush(order);
 
         List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
@@ -120,6 +110,8 @@ public class OrderService {
         }
 
         Order order = jahezOrderMapper.toJahezOrderEntity(jahezOrder);
+        branchService.recalcBranchWorkload(order.getBranch());
+        order.setEstimation(branchService.getEstimationByBranch(order.getBranch()));
         orderRepo.saveAndFlush(order);
 
         var mapped = jahezOrderMapper.map(jahezOrder, order);
@@ -129,6 +121,8 @@ public class OrderService {
         orderRepo.save(order);
 
         if(mapped.comboItems()!=null) comboItemRepo.saveAllAndFlush(mapped.comboItems());
+
+        branchService.recalcBranchWorkload(order.getBranch());
 
         orderEvents.pushCreated(order, mapped.items());
     }
@@ -222,8 +216,7 @@ public class OrderService {
             order.setIsPickedUp(true);
 
             orderRepo.save(order);
-
-            orderEvents.pushPickedUp(order.getId());
+            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order));
         }
     }
 
@@ -346,7 +339,8 @@ public class OrderService {
                     o.getIsReady(),
                     o.getIsPaid(),
                     o.getIsPickedUp(),
-                    itemTOs
+                    itemTOs,
+                    o.getEstimation()
             );
         }).toList();
 
@@ -429,6 +423,14 @@ public class OrderService {
         }
 
         return "Order "+orderId+" was successfully deleted";
+    }
+
+    public OrderInfoTO getOrderInfo(Long orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order with id "+orderId+" wasn't found"));
+
+        Integer estimation = branchService.getEstimationByBranch(order.getBranch());
+        return orderMapper.toOrderInfoTO(order, estimation);
     }
 
     public final class Bd {
