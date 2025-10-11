@@ -3,6 +3,7 @@ package com.icpizza.backend.jahez.mapper;
 import com.icpizza.backend.entity.*;
 import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
+import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.service.MenuService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class JahezOrderMapper {
             "KINZA-COLA-S",
             "MIRINDA-CITRUS-S"
     );
+    private final BranchRepository branchRepository;
 
     Random random = new Random();
     private static final BigDecimal ZERO = BigDecimal.ZERO;
@@ -144,6 +146,7 @@ public class JahezOrderMapper {
 
     public Order toJahezOrderEntity(JahezDTOs.JahezOrderCreatePayload jahezOrder){
         Order order = new Order();
+        Branch branch = branchRepository.findByExternalId(jahezOrder.branch_id());
         order.setStatus(OrderStatus.toLabel(OrderStatus.PENDING));
         order.setOrderNo(random.nextInt(1, 999));
         order.setAddress(null);
@@ -152,7 +155,7 @@ public class JahezOrderMapper {
         order.setType("Jahez");
         order.setCreatedAt(LocalDateTime.now(BAHRAIN));
         order.setPaymentType(JahezDTOs.JahezOrderCreatePayload.PaymentMethod.toLabel(jahezOrder.payment_method()));
-
+        order.setBranch(branch);
         return order;
     }
 

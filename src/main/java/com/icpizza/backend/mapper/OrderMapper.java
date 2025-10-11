@@ -4,11 +4,10 @@ import com.icpizza.backend.cache.MenuSnapshot;
 import com.icpizza.backend.dto.CreateOrderTO;
 import com.icpizza.backend.dto.EditOrderTO;
 import com.icpizza.backend.dto.OrderHistoryTO;
-import com.icpizza.backend.entity.ComboItem;
-import com.icpizza.backend.entity.Customer;
-import com.icpizza.backend.entity.Order;
-import com.icpizza.backend.entity.OrderItem;
+import com.icpizza.backend.dto.OrderInfoTO;
+import com.icpizza.backend.entity.*;
 import com.icpizza.backend.enums.OrderStatus;
+import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.repository.ComboItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -17,21 +16,24 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
 public class OrderMapper {
     private static final Logger log = LoggerFactory.getLogger(OrderMapper.class);
+    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     Random random = new Random();
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
     private final ComboItemRepository comboItemRepository;
+    private final BranchRepository branchRepository;
 
     public Order toOrderEntity(CreateOrderTO orderTO, Customer customer){
         Order order = new Order();
+        Branch branch = branchRepository.findByBranchNumber(orderTO.branchNumber());
         order.setAmountPaid(orderTO.amountPaid());
         order.setOrderNo(random.nextInt(1, 999));
         order.setType(orderTO.orderType());
@@ -42,7 +44,7 @@ public class OrderMapper {
         order.setCreatedAt(LocalDateTime.now(BAHRAIN));
         order.setExternalId(null);
         order.setAddress(orderTO.address());
-
+        order.setBranch(branch);
         return order;
     }
 
@@ -156,7 +158,8 @@ public class OrderMapper {
                 order.getNotes(),
                 order.getAddress(),
                 order.getIsPaid(),
-                order.getIsReady()
+                order.getIsReady(),
+                order.getBranch().getBranchNumber()
         );
     }
 
@@ -264,5 +267,15 @@ public class OrderMapper {
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .orElse("");
+    }
+
+    public OrderInfoTO toOrderInfoTO(Order order, Integer estimation) {
+        return new OrderInfoTO(
+                order.getId(),
+                order.getOrderNo(),
+                order.getStatus(),
+                order.getCreatedAt().format(DT_FMT),
+                estimation
+        );
     }
 }

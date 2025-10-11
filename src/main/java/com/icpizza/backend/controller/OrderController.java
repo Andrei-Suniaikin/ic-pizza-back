@@ -2,6 +2,7 @@ package com.icpizza.backend.controller;
 
 import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.Order;
+import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.service.OrderService;
 import com.icpizza.backend.websocket.OrderEvents;
 import com.icpizza.backend.websocket.dto.OrderAckTO;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.Map;
 public class OrderController {
     private final OrderService orderService;
     private final OrderEvents orderEvents;
+    private final OrderRepository orderRepository;
 
     @PostMapping("/status_update")
     public ResponseEntity<Void> orderStatusUpdate(@RequestBody OrderStatusUpdateTO newStatus){
@@ -80,5 +83,13 @@ public class OrderController {
     @DeleteMapping("/delete_order")
     public ResponseEntity<String> deleteOrder(@RequestParam String orderId){
         return new ResponseEntity<>(orderService.deleteOrder(orderId), HttpStatus.OK);
+    }
+
+    @GetMapping("/order_status")
+    public ResponseEntity<OrderInfoTO> getOrderStatus(@RequestParam("order_id") Long orderId){
+        log.info("[GetOrderStatus] is triggered for order with ID: "+ orderId);
+        OrderInfoTO info = orderService.getOrderInfo(orderId);
+        log.info("[GetOrderStatus] is triggered for order with ID: "+ info);
+        return new ResponseEntity<>(info, HttpStatus.OK);
     }
 }

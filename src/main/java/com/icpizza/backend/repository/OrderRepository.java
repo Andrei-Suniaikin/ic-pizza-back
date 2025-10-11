@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
@@ -139,4 +140,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT SUM(o.amountPaid) FROM Order o WHERE o.createdAt BETWEEN :start AND :end AND o.type = :type")
     BigDecimal sumAmountPaidBetweenAndOrderType(@Param("start") LocalDateTime start,
                                                 @Param("end") LocalDateTime end,
-                                                @Param("type") String type);}
+                                                @Param("type") String type);
+
+    @Query("SELECT o.id FROM Order o WHERE o.branch.branchNumber = :branchNumber AND o.status = 'Kitchen Phase'")
+    List<Long> findActiveOrderIdsByBranch(@Param("branchNumber") int branchNumber);
+
+    }

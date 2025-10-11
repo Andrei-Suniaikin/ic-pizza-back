@@ -1,9 +1,7 @@
 package com.icpizza.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.icpizza.backend.entity.ComboItem;
 
-import java.sql.Time;
 import java.util.List;
 
 public record ActiveOrdersTO(
@@ -24,7 +22,8 @@ public record ActiveOrdersTO(
         Boolean isReady,
         Boolean isPaid,
         Boolean isPickedUp,
-        java.util.List<ActiveOrderItemTO> items
+        java.util.List<ActiveOrderItemTO> items,
+        Integer estimation
 ) {
     public record ActiveOrderItemTO(
             String name,
