@@ -19,7 +19,8 @@ public record OrderPushTO(
         @JsonProperty("notes") String notes,
         @JsonProperty("external_id") Long externalId, // ← сюда кладём Jahez id (или null)
         @JsonProperty("items") List<ItemTO> items,
-        Boolean isPaid
+        Boolean isPaid,
+        String status
 ) {
     public record ItemTO(
             String name,

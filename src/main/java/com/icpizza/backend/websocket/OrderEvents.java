@@ -125,7 +125,7 @@ public class OrderEvents {
                 return;
             }
             attempts.put(pushOrderStatusUpdated.id(), prev + 1);
-            ws.convertAndSend(dest, pushOrderStatusUpdated.id());
+            ws.convertAndSend(dest, pushOrderStatusUpdated);
             ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
             pending.put(pushOrderStatusUpdated.id(), again);
         }, new java.util.Date(System.currentTimeMillis() + 3000));
