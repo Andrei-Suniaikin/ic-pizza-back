@@ -6,8 +6,6 @@ import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.repository.ComboItemRepository;
 import com.icpizza.backend.service.BranchService;
 import com.icpizza.backend.whatsapp.config.WhatsAppApiProperties;
-import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -15,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
-import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -243,12 +240,10 @@ public class WhatsAppService {
                     comboLines.add(line.toString());
                 }
 
-                // пример: "1x - *Pizza Combo (M)* -> [BBQ Chicken Ranch (M) + Thin Dough, Water, BBQ Sauce]"
                 String part = qty + "x - *" + name + "* (" + size + ") -> " + String.join(", ", comboLines);
                 parts.add(part);
 
             } else {
-                // обычный айтем
                 List<String> extras = new ArrayList<>();
                 if (Boolean.TRUE.equals(it.isThinDough())) extras.add("Thin Dough");
                 if (Boolean.TRUE.equals(it.isGarlicCrust())) extras.add("Garlic Crust");
@@ -446,42 +441,4 @@ public class WhatsAppService {
                 .filter(StringUtils::hasText)
                 .toList();
     }
-
-
-    private Map<String, Object> templatePayload(String to, String templateName, List<Map<String, Object>> components) {
-        Map<String, Object> tpl = new HashMap<>();
-        tpl.put("name", templateName);
-        tpl.put("language", Map.of("code", "en"));
-        tpl.put("components", components);
-
-        Map<String, Object> p = new HashMap<>();
-        p.put("messaging_product", "whatsapp");
-        p.put("recipient_type", "individual");
-        p.put("to", to);
-        p.put("type", "template");
-        p.put("template", tpl);
-        return p;
-    }
-
-    private Map<String, Object> headerParam(String parameterName, String text) {
-        Map<String, Object> param = new HashMap<>();
-        param.put("type", "text");
-        if (parameterName != null) param.put("parameter_name", parameterName);
-        param.put("text", text);
-
-        return Map.of("type", "HEADER", "parameters", List.of(param));
-    }
-
-    private Map<String, Object> bodyParams(Map<String, Object>... params) {
-        return Map.of("type", "BODY", "parameters", List.of(params));
-    }
-
-    private Map<String, Object> textParam(String parameterName, String text) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("type", "text");
-        if (parameterName != null) m.put("parameter_name", parameterName);
-        m.put("text", text);
-        return m;
-    }
-
 }

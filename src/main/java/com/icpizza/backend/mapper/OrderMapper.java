@@ -158,7 +158,6 @@ public class OrderMapper {
                 order.getNotes(),
                 order.getAddress(),
                 order.getIsPaid(),
-                order.getIsReady(),
                 order.getBranch().getBranchNumber()
         );
     }

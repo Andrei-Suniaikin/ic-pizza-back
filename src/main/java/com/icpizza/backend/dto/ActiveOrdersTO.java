@@ -19,9 +19,7 @@ public record ActiveOrdersTO(
         String payment_type,
         String notes,
         String status,
-        Boolean isReady,
         Boolean isPaid,
-        Boolean isPickedUp,
         java.util.List<ActiveOrderItemTO> items,
         Integer estimation
 ) {

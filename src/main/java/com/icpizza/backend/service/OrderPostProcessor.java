@@ -1,5 +1,6 @@
 package com.icpizza.backend.service;
 
+import com.icpizza.backend.dto.PushOrderStatusUpdated;
 import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.entity.ComboItem;
 import com.icpizza.backend.entity.Order;
@@ -74,7 +75,7 @@ public class OrderPostProcessor {
                     && !orderReadyEvent.order.getCustomer().getTelephoneNo().isBlank()) {
                 wa.sendOrderReady(orderReadyEvent.order().getCustomer().getTelephoneNo());
             }
-            orderEvents.pushReady(orderReadyEvent.order.getId());
+            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderReadyEvent.order.getId(),  orderReadyEvent.order.getStatus()));
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
         }
@@ -90,9 +91,21 @@ public class OrderPostProcessor {
                         orderPickedUpEvent.order.getCustomer().getName(),
                         orderPickedUpEvent.order.getCustomer().getId());
             }
-            orderEvents.pushPickedUp(orderPickedUpEvent.order.getId());
+            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderPickedUpEvent.order.getId(), orderPickedUpEvent.order.getStatus()));
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
+        }
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOrderInOven(PushOrderStatusUpdated newStatus){
+        try {
+            log.info("[OnOrderInOven] New Order Status: " + newStatus.toString());
+            orderEvents.pushOrderStatusUpdate(newStatus);
+        }
+        catch (Exception ex) {
+            log.error("[OVEN] Oven status send failed", ex);
         }
     }
 

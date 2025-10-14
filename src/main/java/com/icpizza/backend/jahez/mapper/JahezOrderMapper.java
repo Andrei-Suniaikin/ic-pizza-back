@@ -147,7 +147,7 @@ public class JahezOrderMapper {
     public Order toJahezOrderEntity(JahezDTOs.JahezOrderCreatePayload jahezOrder){
         Order order = new Order();
         Branch branch = branchRepository.findByExternalId(jahezOrder.branch_id());
-        order.setStatus(OrderStatus.toLabel(OrderStatus.PENDING));
+        order.setStatus(OrderStatus.toLabel(OrderStatus.KITCHEN_PHASE));
         order.setOrderNo(random.nextInt(1, 999));
         order.setAddress(null);
         order.setExternalId(jahezOrder.jahez_id());

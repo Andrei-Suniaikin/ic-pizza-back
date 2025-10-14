@@ -29,14 +29,8 @@ public class Order {
     @Column(name = "status", length = 255)
     private String status;
 
-    @Column(name = "is_ready")
-    private Boolean isReady=false;
-
     @Column(name = "is_paid")
     private Boolean isPaid=false;
-
-    @Column(name = "is_picked_up")
-    private Boolean isPickedUp=false;
 
     @Column(name = "ready_timestamp")
     private Integer readyTimeStamp=null;

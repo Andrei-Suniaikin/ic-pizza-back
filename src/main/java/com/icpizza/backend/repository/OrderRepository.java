@@ -18,42 +18,20 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Optional<Order> findByExternalId(Long externalId);
 
-    @Modifying
-    @Query("update Order o set o.paymentType = :paymentType where o.id = :id")
-    int updatePayment(@Param("id") Long id, @Param("paymentType") String paymentType);
-
-    @Query("""
-       SELECT DISTINCT o
-       FROM Order o
-       LEFT JOIN FETCH o.customer
-       WHERE o.status = :status
-       """)
-    List<Order> findWithCustomerByStatus(@Param("status") String status);
-
     Optional<Order> findById(Long id);
 
     @Query("""
   SELECT o FROM Order o
-  WHERE o.isPickedUp = FALSE
-    AND o.isPickedUp IS NOT NULL
+  WHERE o.status != "Picked Up"
   ORDER BY o.createdAt DESC
 """)
     List<Order> findActiveOrders();
-
-
-    @Query("""
-           select o from Order o
-           left join fetch o.customer c
-           where o.createdAt between :from and :to
-           """)
-    List<Order> findWithCustomerBetween(@Param("from") OffsetDateTime from,
-                                        @Param("to") OffsetDateTime to);
 
     @Query("""
        select o
        from Order o
        left join fetch o.customer
-       where o.isPickedUp = true
+       where o.status = "Picked Up"
          and o.createdAt >= :cutoff
        order by o.createdAt desc
        """)
@@ -89,17 +67,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                        @Param("currStart") Timestamp currStart,
                        @Param("currEnd") Timestamp currEnd);
 
-    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(
-            java.time.LocalDateTime start, java.time.LocalDateTime end);
-
-    @Query("""
-        select coalesce(sum(o.amountPaid), 0)
-        from Order o
-        where o.createdAt >= :start and o.createdAt <= :end
-    """)
-    BigDecimal sumAmountPaidBetween(@Param("start") LocalDateTime start,
-                                    @Param("end") LocalDateTime end);
-
     @Query(value = """
         SELECT COUNT(*) FROM (
             SELECT o.telephone_no
@@ -120,14 +87,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     """, nativeQuery = true)
     long countUniqueCustomersInWindow(@Param("start") LocalDateTime start,
                                       @Param("end") LocalDateTime end);
-
-    @Query("""
-           select coalesce(sum(o.amountPaid), 0)
-             from Order o
-            where (lower(o.paymentType) like 'cash%' or lower(o.paymentType) = 'cash')
-              and o.createdAt >= :from and o.createdAt <= :to
-           """)
-    BigDecimal sumCashBetween(LocalDateTime from, LocalDateTime to);
 
     @Query("SELECT SUM(o.amountPaid) FROM Order o")
     BigDecimal sumAllAmountPaidAllTime();

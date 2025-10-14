@@ -30,7 +30,6 @@ public record CreateOrderTO (
         String notes,
         String address,
         Boolean isPaid,
-        Boolean isReady,
         Integer branchNumber
 ){
         public record OrderItemsTO(
