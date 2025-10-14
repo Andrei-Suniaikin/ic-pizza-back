@@ -44,10 +44,6 @@ public class OrderService {
     private final ComboItemRepository comboItemRepo;
     private final BranchService branchService;
 
-    private static final List<String> CATEGORY_ORDER = List.of(
-            "Combo Deals", "Brick Pizzas", "Pizzas", "Sides", "Sauces", "Beverages"
-    );
-
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Transactional
@@ -130,11 +126,11 @@ public class OrderService {
     @Transactional
     @Async
     public void updateJahezOrderStatus(JahezDTOs.JahezOrderUpdatePayload payload){
+        log.info("[JAHEZ ORDER STATUS UPDATE] payload={}", payload);
         Order order = orderRepo.findByExternalId(payload.jahezOrderId())
                 .orElseThrow(()-> new IllegalArgumentException("No order found with externalId: " + payload.jahezOrderId()));
 
         order.setPaymentType(JahezDTOs.JahezOrderCreatePayload.PaymentMethod.toLabel(payload.payment_method()));
-        order.setStatus(OrderStatus.toLabel(payload.status()));
     }
 
     @Transactional
@@ -196,8 +192,6 @@ public class OrderService {
                     .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
                             .formatted(orderStatusUpdateTO.orderId())));
 
-            order.setIsReady(true);
-
             Integer duration = (int) Math.max(0, Duration.between(order.getCreatedAt(), LocalDateTime.now(BAHRAIN)).getSeconds());
 
             order.setReadyTimeStamp(duration);
@@ -213,10 +207,21 @@ public class OrderService {
                     .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
                             .formatted(orderStatusUpdateTO.orderId())));
 
-            order.setIsPickedUp(true);
+            order.setStatus(OrderStatus.toLabel(OrderStatus.PICKED_UP));
 
             orderRepo.save(order);
             orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order));
+        }
+
+        if (orderStatusUpdateTO.orderStatus().equals("Oven")) {
+            Order order = orderRepo.findById(orderStatusUpdateTO.orderId())
+                    .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
+                            .formatted(orderStatusUpdateTO.orderId())));
+
+            order.setStatus(OrderStatus.toLabel(OrderStatus.OVEN));
+
+            orderRepo.save(order);
+            orderPostProcessor.onOrderInOven(new PushOrderStatusUpdated(orderStatusUpdateTO.orderId(), orderStatusUpdateTO.orderStatus()));
         }
     }
 
@@ -336,9 +341,7 @@ public class OrderService {
                     o.getPaymentType(),
                     o.getNotes() == null ? "" : o.getNotes(),
                     o.getStatus(),
-                    o.getIsReady(),
                     o.getIsPaid(),
-                    o.getIsPickedUp(),
                     itemTOs,
                     o.getEstimation()
             );
@@ -370,24 +373,6 @@ public class OrderService {
         order.setPaymentType(updatePaymentType.paymentType());
 
         orderRepo.save(order);
-    }
-
-    @Transactional
-    public void markOrderReady(MarkOrderReadyTO markOrderReadyTO) {
-        Order order = orderRepo.findById(markOrderReadyTO.id())
-                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found"
-                        .formatted(markOrderReadyTO.id())));
-
-        order.setIsReady(true);
-
-        Integer duration = (int) Math.max(0, Duration.between(order.getCreatedAt(), LocalDateTime.now(BAHRAIN)).getSeconds());
-
-        order.setReadyTimeStamp(duration);
-        order.setStatus(OrderStatus.toLabel(OrderStatus.READY));
-
-        orderRepo.save(order);
-
-        orderPostProcessor.onOrderReady(new OrderPostProcessor.OrderReadyEvent(order));
     }
 
     @Transactional

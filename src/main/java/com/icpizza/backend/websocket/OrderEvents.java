@@ -1,15 +1,15 @@
 package com.icpizza.backend.websocket;
 
 import com.icpizza.backend.cache.MenuSnapshot;
-import com.icpizza.backend.dto.UpdateWorkLoadLevelTO;
+import com.icpizza.backend.dto.PushOrderStatusUpdated;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
-import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.service.MenuService;
 import com.icpizza.backend.websocket.dto.OrderAckTO;
 import com.icpizza.backend.websocket.dto.OrderPushTO;
 import com.icpizza.backend.websocket.mapper.WebsocketOrderMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderEvents {
@@ -44,27 +45,6 @@ public class OrderEvents {
         OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
 
         sendWithAck("/topic/order-updates", payload);
-    }
-
-    public void pushReady(Long id){
-        String dest = "/topic/order-ready";
-        ws.convertAndSend(dest, id);
-
-        attempts.putIfAbsent(id, 0);
-        ScheduledFuture<?> future = scheduler.schedule(() -> {
-            int prev = attempts.getOrDefault(id, 0);
-            if (prev >= MAX_ATTEMPTS) {
-                pending.remove(id);
-                attempts.remove(id);
-                return;
-            }
-            attempts.put(id, prev + 1);
-            ws.convertAndSend(dest, id);
-            ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
-            pending.put(id, again);
-        }, new java.util.Date(System.currentTimeMillis() + 3000));
-
-        pending.put(id, future);
     }
 
     public void pushPaid(Long id){
@@ -131,25 +111,26 @@ public class OrderEvents {
         pending.put(id, future);
     }
 
-    public void pushPickedUp(Long id){
-        String dest = "/topic/order-picked-up";
-        ws.convertAndSend(dest, id);
+    public void pushOrderStatusUpdate(PushOrderStatusUpdated pushOrderStatusUpdated){
+        log.info("[PUSH_ORDER_STATUS_UPDATE_EVENT] request: {}", pushOrderStatusUpdated);
+        String dest = "/topic/order-status-updated";
+        ws.convertAndSend(dest, pushOrderStatusUpdated);
 
-        attempts.putIfAbsent(id, 0);
+        attempts.putIfAbsent(pushOrderStatusUpdated.id(), 0);
         ScheduledFuture<?> future = scheduler.schedule(() -> {
-            int prev = attempts.getOrDefault(id, 0);
+            int prev = attempts.getOrDefault(pushOrderStatusUpdated.id(), 0);
             if (prev >= MAX_ATTEMPTS) {
-                pending.remove(id);
-                attempts.remove(id);
+                pending.remove(pushOrderStatusUpdated.id());
+                attempts.remove(pushOrderStatusUpdated.id());
                 return;
             }
-            attempts.put(id, prev + 1);
-            ws.convertAndSend(dest, id);
+            attempts.put(pushOrderStatusUpdated.id(), prev + 1);
+            ws.convertAndSend(dest, pushOrderStatusUpdated.id());
             ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
-            pending.put(id, again);
+            pending.put(pushOrderStatusUpdated.id(), again);
         }, new java.util.Date(System.currentTimeMillis() + 3000));
 
-        pending.put(id, future);
+        pending.put(pushOrderStatusUpdated.id(), future);
     }
 
     public void handleAck(OrderAckTO ack) {

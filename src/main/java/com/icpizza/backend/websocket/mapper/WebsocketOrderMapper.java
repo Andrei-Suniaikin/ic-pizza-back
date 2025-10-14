@@ -73,7 +73,6 @@ public class WebsocketOrderMapper {
                 order.getNotes() == null ? "" : order.getNotes(),
                 order.getExternalId(),
                 itemTOs,
-                order.getIsReady(),
                 order.getIsPaid()
         );
     }

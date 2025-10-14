@@ -64,17 +64,6 @@ public class OrderController {
                 HttpStatus.OK);
     }
 
-    @PutMapping("/ready_action")
-    public ResponseEntity<Map<String, String>> markOrderReady(@RequestBody MarkOrderReadyTO markOrderReadyTO){
-        log.info(String.valueOf(markOrderReadyTO));
-
-        orderService.markOrderReady(markOrderReadyTO);
-
-        return new ResponseEntity<>(Map.of("Response" , "Order with ID: "
-                +markOrderReadyTO.id()+" marked as: Ready") ,
-                HttpStatus.OK);
-    }
-
     @MessageMapping("/orders/ack")
     public void ack(OrderAckTO ack) {
         orderEvents.handleAck(ack);

@@ -3,6 +3,8 @@ package com.icpizza.backend.enums;
 public enum OrderStatus {
     PENDING("Pending"),
     KITCHEN_PHASE("Kitchen Phase"),
+    OVEN("Oven"),
+    PICKED_UP("Picked Up"),
     READY("Ready"),
     ACCEPTED("Accepted"),
     REJECTED("Rejected"),
