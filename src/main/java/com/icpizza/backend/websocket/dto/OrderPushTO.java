@@ -17,7 +17,7 @@ public record OrderPushTO(
         @JsonProperty("order_created") String orderCreated,
         @JsonProperty("payment_type") String paymentType,
         @JsonProperty("notes") String notes,
-        @JsonProperty("external_id") Long externalId, // ← сюда кладём Jahez id (или null)
+        @JsonProperty("external_id") Long externalId,
         @JsonProperty("items") List<ItemTO> items,
         Boolean isPaid,
         String status
