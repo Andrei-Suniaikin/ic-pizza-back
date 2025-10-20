@@ -1,5 +1,6 @@
 package com.icpizza.backend.service;
 
+import com.icpizza.backend.dto.BranchTO;
 import com.icpizza.backend.dto.UpdateWorkLoadLevelTO;
 import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.enums.WorkLoadLevel;
@@ -8,6 +9,7 @@ import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.websocket.BranchEvents;
 import com.icpizza.backend.websocket.OrderEvents;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -67,6 +69,7 @@ public class BranchService {
         return WorkLoadLevel.OVERLOADED;
     }
 
+    @Transactional
     public boolean setWorkloadLevel(UpdateWorkLoadLevelTO updateWorkLoadLevelTO) {
         log.info("[BRANCH WORKLOAD] setWorkloadLevel "+updateWorkLoadLevelTO.level()+"");
         Branch branch = branchRepository.findByBranchNumber(updateWorkLoadLevelTO.branchNumber());
@@ -86,5 +89,10 @@ public class BranchService {
     public WorkLoadLevel getWorkLoadLevel(Integer branchNumber) {
         Branch branch = branchRepository.findByBranchNumber(branchNumber);
         return branch.getWorkLoadLevel();
+    }
+
+    public BranchTO getBranchInfo(Integer branchNumber) {
+        Branch branch = branchRepository.findByBranchNumber(branchNumber);
+        return new BranchTO(branch.getId(), branch.getExternalId(), branchNumber);
     }
 }
