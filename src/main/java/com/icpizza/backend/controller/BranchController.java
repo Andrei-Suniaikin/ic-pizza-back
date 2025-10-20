@@ -1,5 +1,6 @@
 package com.icpizza.backend.controller;
 
+import com.icpizza.backend.dto.BranchTO;
 import com.icpizza.backend.dto.UpdateWorkLoadLevelTO;
 import com.icpizza.backend.enums.WorkLoadLevel;
 import com.icpizza.backend.repository.BranchRepository;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class BranchController {
     private final BranchService branchService;
-    private final BranchRepository branchRepository;
 
     @PutMapping("/update_workload_level")
     public ResponseEntity<String> updateWorkloadLevel(@RequestBody UpdateWorkLoadLevelTO updateWorkLoadLevelTO) {
@@ -33,5 +33,11 @@ public class BranchController {
         log.info("Get workload level for "+level);
         if (level == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         return new ResponseEntity<>(level, HttpStatus.OK);
+    }
+
+    @GetMapping("/get_branch_info")
+    public ResponseEntity<BranchTO> getBranchInfo(@RequestParam("branchNumber") Integer branchNumber) {
+        log.info("Get branch info for "+branchNumber);
+        return new ResponseEntity<>(branchService.getBranchInfo(branchNumber), HttpStatus.OK);
     }
 }
