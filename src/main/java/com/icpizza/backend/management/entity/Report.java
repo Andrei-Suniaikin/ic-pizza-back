@@ -8,13 +8,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "report")
+@Table(name = "reports")
 public class Report {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,4 +35,7 @@ public class Report {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
+
+    @Column(name = "final_price",  precision = 19, scale = 3)
+    private BigDecimal finalPrice;
 }

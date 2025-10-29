@@ -93,6 +93,6 @@ public class BranchService {
 
     public BranchTO getBranchInfo(Integer branchNumber) {
         Branch branch = branchRepository.findByBranchNumber(branchNumber);
-        return new BranchTO(branch.getId(), branch.getExternalId(), branchNumber);
+        return new BranchTO(branch.getId(), branch.getExternalId(), branchNumber, branch.getBranchName());
     }
 }

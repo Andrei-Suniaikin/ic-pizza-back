@@ -40,13 +40,14 @@ public class ReportService {
     }
 
     @Transactional
-    public void createReport(CreateReportTO createReportTO) {
+    public BaseManagementResponse createReport(CreateReportTO createReportTO) {
         try {
             Report report = reportMapper.toReportEntity(createReportTO);
             reportRepository.saveAndFlush(report);
             List<InventoryProduct> reportProducts = reportMapper.toInventoryProducts(createReportTO.inventoryProducts(), report);
             log.info("[REPORT PRODUCTS] converting products from entity {}", reportProducts.toString());
             inventoryProductRepository.saveAll(reportProducts);
+            return reportMapper.toBaseManagementResponse(report);
         }
         catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -54,15 +55,21 @@ public class ReportService {
     }
 
     @Transactional
-    public void editReport(EditReportTO editReportTO) {
+    public BaseManagementResponse editReport(EditReportTO editReportTO) {
         try{
             Report report = reportRepository.findById(editReportTO.id())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+            report.setFinalPrice(editReportTO.finalPrice());
+            reportRepository.saveAndFlush(report);
 
             inventoryProductRepository.deleteAllByReport(report);
 
             List<InventoryProduct> newProducts = reportMapper.toInventoryProductsEntity(editReportTO.inventoryProducts(), report);
             inventoryProductRepository.saveAll(newProducts);
+
+            return reportMapper.toBaseManagementResponse(report);
+
         }
         catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);

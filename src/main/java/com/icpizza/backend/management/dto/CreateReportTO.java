@@ -10,6 +10,7 @@ public record CreateReportTO(
         ReportType type,
         Integer branchNo,
         Long userId,
+        BigDecimal finalPrice,
         List<CreateReportProductsTO> inventoryProducts
 ) {
     public record CreateReportProductsTO(

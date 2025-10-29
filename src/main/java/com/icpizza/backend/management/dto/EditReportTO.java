@@ -12,6 +12,7 @@ public record EditReportTO(
         ReportType type,
         Integer branchNo,
         Long userId,
+        BigDecimal finalPrice,
         List<EditReportTO.EditReportProductsTO> inventoryProducts
 ) {
     public record EditReportProductsTO(

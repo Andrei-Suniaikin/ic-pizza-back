@@ -1,6 +1,5 @@
 package com.icpizza.backend.management.dto;
 
-import com.icpizza.backend.management.entity.Product;
 import com.icpizza.backend.management.enums.ReportType;
 
 import java.math.BigDecimal;
@@ -12,6 +11,7 @@ public record ReportTO(
         ReportType type,
         Integer branchNo,
         Long userId,
+        BigDecimal finalPrice,
         List<ReportTO.InventoryProductsTO> inventoryProducts
 ) {
     public record InventoryProductsTO(

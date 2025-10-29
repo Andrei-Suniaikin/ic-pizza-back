@@ -15,7 +15,11 @@ public class ProductMapper {
                             product.getId(),
                             product.getName(),
                             product.getPrice(),
-                            product.getIsInventory()
+                            product.getTargetPrice(),
+                            product.getIsInventory(),
+                            product.getIsBundle(),
+                            product.getIsPurchasable(),
+                            product.getTopVendor()
                     );
                 }).toList();
     }

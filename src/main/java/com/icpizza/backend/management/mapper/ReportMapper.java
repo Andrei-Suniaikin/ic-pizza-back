@@ -39,7 +39,8 @@ public class ReportMapper {
                     report.getTitle(),
                     report.getCreatedAt().toString(),
                     report.getBranch().getBranchNumber(),
-                    report.getUser().getUserName()
+                    report.getUser().getUserName(),
+                    report.getFinalPrice()
             );
         }).toList();
     }
@@ -52,6 +53,7 @@ public class ReportMapper {
         report.setTitle(createReportTO.title());
         report.setType(createReportTO.type());
         report.setBranch(branch);
+        report.setFinalPrice(createReportTO.finalPrice());
         report.setCreatedAt(LocalDateTime.now(BAHRAIN));
         return report;
     }
@@ -98,6 +100,7 @@ public class ReportMapper {
                 report.getType(),
                 report.getBranch().getBranchNumber(),
                 report.getUser().getId(),
+                report.getFinalPrice(),
                 toInventoryProductsTO(products)
         );
     }
@@ -118,8 +121,23 @@ public class ReportMapper {
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
-                product.getIsInventory()
+                product.getTargetPrice(),
+                product.getIsInventory(),
+                product.getIsBundle(),
+                product.getIsPurchasable(),
+                product.getTopVendor()
         );
     }
 
+    public BaseManagementResponse toBaseManagementResponse(Report report) {
+        return new BaseManagementResponse(
+                report.getId(),
+                report.getType(),
+                report.getTitle(),
+                report.getCreatedAt().toString(),
+                report.getBranch().getBranchNumber(),
+                report.getUser().getUserName(),
+                report.getFinalPrice()
+        );
+    }
 }

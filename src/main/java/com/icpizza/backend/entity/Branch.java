@@ -30,4 +30,7 @@ public class Branch {
 
     @Column(name="external_id")
     private String externalId;
+
+    @Column(name = "branch_name")
+    private String branchName;
 }
