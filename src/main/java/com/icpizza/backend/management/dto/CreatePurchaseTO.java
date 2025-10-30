@@ -9,6 +9,7 @@ public record CreatePurchaseTO(
         BigDecimal finalPrice,
         Long userId,
         LocalDate purchaseDate,
+        Integer branchNo,
         List<PurchaseProductsTO> purchaseProducts
         ) {
     public record PurchaseProductsTO(

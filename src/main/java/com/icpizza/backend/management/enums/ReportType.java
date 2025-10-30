@@ -2,9 +2,10 @@ package com.icpizza.backend.management.enums;
 
 public enum ReportType {
     INVENTORY("Inventory"),
-    PURCHASE("Purchase");
+    PURCHASE("Purchase"),
+    PRODUCT_CONSUMPTION("Product Consumption"),;
 
-    private final String label;
+    public final String label;
     ReportType(String label) {
         this.label = label;
     }

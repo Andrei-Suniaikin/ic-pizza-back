@@ -1,17 +1,19 @@
 package com.icpizza.backend.management.mapper;
 
+import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.entity.User;
 import com.icpizza.backend.management.dto.*;
-import com.icpizza.backend.management.entity.Product;
-import com.icpizza.backend.management.entity.PurchaseProduct;
-import com.icpizza.backend.management.entity.PurchaseReport;
-import com.icpizza.backend.management.entity.Vendor;
+import com.icpizza.backend.management.entity.*;
+import com.icpizza.backend.management.enums.ReportType;
 import com.icpizza.backend.management.repository.ProductRepository;
 import com.icpizza.backend.management.repository.VendorRepository;
+import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -20,8 +22,11 @@ public class PurchaseMapper {
     private final UserRepository userRepository;
     private final VendorRepository vendorRepository;
     private final ProductRepository productRepository;
+    private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
+    private final BranchRepository branchRepository;
 
-    public List<BasePurchaseResponse> toBasePurchaseResponse(List<PurchaseReport> reports){
+
+    public List<BasePurchaseResponse> toBasePurchaseResponse(List<Report> reports){
         return reports.stream()
                 .map(report -> {
                     return new BasePurchaseResponse(
@@ -33,15 +38,18 @@ public class PurchaseMapper {
                 }).toList();
     }
 
-    public PurchaseReport toPurchaseReportEntity(CreatePurchaseTO purchaseTO) {
+    public Report toPurchaseReportEntity(CreatePurchaseTO purchaseTO) {
         User user = userRepository.findById(purchaseTO.userId()).orElseThrow(() -> new RuntimeException("User not found"));
-        PurchaseReport purchaseReport = new PurchaseReport();
+        Branch branch = branchRepository.findByBranchNumber(purchaseTO.branchNo());
+        Report purchaseReport = new Report();
         try {
             purchaseReport.setUser(user);
             purchaseReport.setFinalPrice(purchaseTO.finalPrice());
             purchaseReport.setTitle(purchaseTO.title());
             purchaseReport.setUser(user);
-            purchaseReport.setCreatedAt(purchaseTO.purchaseDate());
+            purchaseReport.setCreatedAt(LocalDateTime.now(BAHRAIN));
+            purchaseReport.setType(ReportType.PURCHASE);
+            purchaseReport.setBranch(branch);
             return purchaseReport;
         }
         catch (Exception e) {
@@ -49,7 +57,7 @@ public class PurchaseMapper {
         }
     }
 
-    public List<PurchaseProduct> toPurchaseProductsEntity(PurchaseReport purchaseReport, List<CreatePurchaseTO.PurchaseProductsTO> productsTO) {
+    public List<PurchaseProduct> toPurchaseProductsEntity(Report purchaseReport, List<CreatePurchaseTO.PurchaseProductsTO> productsTO) {
         return productsTO.stream()
                 .map(productTO -> {
                     Vendor vendor = vendorRepository.findByVendorName(productTO.vendorName());
@@ -68,7 +76,7 @@ public class PurchaseMapper {
                 }).toList();
     }
 
-    public BasePurchaseResponse toBasePurchaseResponse(PurchaseReport purchaseReport) {
+    public BasePurchaseResponse toBasePurchaseResponse(Report purchaseReport) {
         return new BasePurchaseResponse(
                 purchaseReport.getId(),
                 purchaseReport.getTitle(),
@@ -77,7 +85,7 @@ public class PurchaseMapper {
         );
     }
 
-    public PurchaseTO toPurchaseTO(PurchaseReport purchaseReport, List<PurchaseProduct> purchaseProducts) {
+    public PurchaseTO toPurchaseTO(Report purchaseReport, List<PurchaseProduct> purchaseProducts) {
         return new PurchaseTO(
                 purchaseReport.getId(),
                 purchaseReport.getTitle(),
@@ -117,7 +125,7 @@ public class PurchaseMapper {
         );
     }
 
-    public List<PurchaseProduct> toPurchaseProductsEntity(List<EditPurchaseTO.PurchaseProductsTO> purchaseProductsTOS, PurchaseReport purchaseReport) {
+    public List<PurchaseProduct> toPurchaseProductsEntity(List<EditPurchaseTO.PurchaseProductsTO> purchaseProductsTOS, Report purchaseReport) {
         return purchaseProductsTOS.stream()
                 .map(productTO -> {
                     Vendor vendor = vendorRepository.findByVendorName(productTO.vendorName());

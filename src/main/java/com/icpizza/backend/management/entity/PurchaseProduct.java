@@ -21,7 +21,7 @@ public class PurchaseProduct {
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private PurchaseReport report;
+    private Report report;
 
     private BigDecimal quantity;
 

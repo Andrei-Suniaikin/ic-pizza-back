@@ -11,7 +11,12 @@ import java.util.List;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
     @Query("""
-    SELECT r FROM Report r WHERE r.branch.branchNumber= :branchNo ORDER BY r.createdAt DESC
+    SELECT r FROM Report r WHERE r.branch.branchNumber= :branchNo AND r.type="INVENTORY" ORDER BY r.createdAt DESC
 """)
     List<Report> findAllByBranchDesc(@Param("branchNo") Integer branchNo);
+
+    @Query("""
+    SELECT r FROM Report r WHERE  r.type="PURCHASE" ORDER BY r.createdAt DESC
+""")
+    List<Report> findAllPurchaseReports();
 }

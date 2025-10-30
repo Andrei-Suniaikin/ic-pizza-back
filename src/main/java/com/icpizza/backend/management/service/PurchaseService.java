@@ -5,10 +5,10 @@ import com.icpizza.backend.management.dto.CreatePurchaseTO;
 import com.icpizza.backend.management.dto.EditPurchaseTO;
 import com.icpizza.backend.management.dto.PurchaseTO;
 import com.icpizza.backend.management.entity.PurchaseProduct;
-import com.icpizza.backend.management.entity.PurchaseReport;
+import com.icpizza.backend.management.entity.Report;
 import com.icpizza.backend.management.mapper.PurchaseMapper;
 import com.icpizza.backend.management.repository.PurchaseProductRepository;
-import com.icpizza.backend.management.repository.PurchaseRepository;
+import com.icpizza.backend.management.repository.ReportRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,21 +25,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class PurchaseService {
-    private final PurchaseRepository purchaseRepository;
     private final PurchaseMapper purchaseMapper;
     private final PurchaseProductRepository purchaseProductRepository;
     private final ProductService productService;
+    private final ReportRepository reportRepository;
 
     public List<BasePurchaseResponse> getPurchaseReports(){
-        List<PurchaseReport> reports = purchaseRepository.findAll();
+        List<Report> reports = reportRepository.findAllPurchaseReports();
         return purchaseMapper.toBasePurchaseResponse(reports);
     }
 
     @Transactional
     public BasePurchaseResponse createPurchaseReport(CreatePurchaseTO purchaseTO) {
         log.info("[CREATE PURCHASE] Creating purchase report for {}", purchaseTO);
-        PurchaseReport purchaseReport = purchaseMapper.toPurchaseReportEntity(purchaseTO);
-        purchaseRepository.save(purchaseReport);
+        Report purchaseReport = purchaseMapper.toPurchaseReportEntity(purchaseTO);
+        reportRepository.save(purchaseReport);
         List<PurchaseProduct> purchaseProducts = purchaseMapper.toPurchaseProductsEntity(purchaseReport, purchaseTO.purchaseProducts());
         purchaseProductRepository.saveAll(purchaseProducts);
         if(!purchaseProducts.isEmpty()){
@@ -51,7 +51,7 @@ public class PurchaseService {
     }
 
     public PurchaseTO getPurchaseReport(Long id) {
-        PurchaseReport purchaseReport = purchaseRepository.findById(id).orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
+        Report purchaseReport = reportRepository.findById(id).orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
 
         List<PurchaseProduct> purchaseProducts = purchaseProductRepository.findAllByPurchaseReport(purchaseReport.getId());
         try {
@@ -64,12 +64,12 @@ public class PurchaseService {
 
     public BasePurchaseResponse editPurchaseReport(EditPurchaseTO editpurchaseTO) {
         log.info("[EDIT PURCHASE REPORT] Editing purchase report with id: "+editpurchaseTO.id()+"");
-        PurchaseReport purchaseReportToEdit = purchaseRepository.findById(editpurchaseTO.id()).orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
+        Report purchaseReportToEdit = reportRepository.findById(editpurchaseTO.id()).orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
         try {
             List<PurchaseProduct> oldPurchaseProducts = purchaseProductRepository.findAllByPurchaseReport(purchaseReportToEdit.getId());
             purchaseProductRepository.deleteAll(oldPurchaseProducts);
             purchaseReportToEdit.setFinalPrice(editpurchaseTO.finalPrice());
-            purchaseRepository.save(purchaseReportToEdit);
+            reportRepository.save(purchaseReportToEdit);
             List<PurchaseProduct> newPurchaseProducts = purchaseMapper.toPurchaseProductsEntity(editpurchaseTO.purchaseProducts(), purchaseReportToEdit);
             purchaseProductRepository.saveAll(newPurchaseProducts);
             if (!newPurchaseProducts.isEmpty()) {
