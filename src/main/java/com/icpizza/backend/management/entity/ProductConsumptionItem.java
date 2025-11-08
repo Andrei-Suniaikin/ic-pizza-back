@@ -7,27 +7,25 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+@Table(name="product_consumption_items")
 @Entity
-@Data
-@Table(name = "inventory_products")
 @NoArgsConstructor
 @AllArgsConstructor
-public class InventoryProduct {
+@Data
+public class ProductConsumptionItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="report_id")
-    private Report report;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product")
     private Product product;
 
-    @Column(precision = 19, scale=3)
-    private BigDecimal quantity;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Report report;
 
-    @Column(precision = 19, scale=3)
-    private BigDecimal totalPrice;
+    @Column(precision = 19, scale = 3)
+    private BigDecimal usage;
+
+    @Column(precision = 19, scale = 3)
+    private BigDecimal price;
 }

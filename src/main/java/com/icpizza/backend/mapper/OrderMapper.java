@@ -224,6 +224,7 @@ public class OrderMapper {
                 customerName,
                 order.getCreatedAt().toString(),
                 order.getPaymentType(),
+                order.getExternalId(),
                 order.getNotes(),
                 itemHistoryTOList
         );

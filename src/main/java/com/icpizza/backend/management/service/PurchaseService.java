@@ -7,6 +7,7 @@ import com.icpizza.backend.management.dto.PurchaseTO;
 import com.icpizza.backend.management.entity.PurchaseProduct;
 import com.icpizza.backend.management.entity.Report;
 import com.icpizza.backend.management.mapper.PurchaseMapper;
+import com.icpizza.backend.management.mapper.Titles;
 import com.icpizza.backend.management.repository.PurchaseProductRepository;
 import com.icpizza.backend.management.repository.ReportRepository;
 import jakarta.transaction.Transactional;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ public class PurchaseService {
     private final PurchaseProductRepository purchaseProductRepository;
     private final ProductService productService;
     private final ReportRepository reportRepository;
+    private final ConsumptionService consumptionService;
 
     public List<BasePurchaseResponse> getPurchaseReports(){
         List<Report> reports = reportRepository.findAllPurchaseReports();

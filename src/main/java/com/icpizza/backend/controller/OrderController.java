@@ -39,10 +39,8 @@ public class OrderController {
     }
 
     @PutMapping("/edit_order")
-    public ResponseEntity<Map<String, String>> editOrder(@RequestBody EditOrderTO editOrderTO){
-        orderService.editOrder(editOrderTO);
-        return new ResponseEntity<>(Map.of("Response", "Order "+editOrderTO.orderNo()+" successfully edited")
-                ,HttpStatus.OK);
+    public ResponseEntity<EditOrderResponse> editOrder(@RequestBody EditOrderTO editOrderTO){
+        return new ResponseEntity<>(orderService.editOrder(editOrderTO) ,HttpStatus.OK);
     }
 
     @GetMapping("/get_all_active_orders")

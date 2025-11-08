@@ -3,6 +3,7 @@ package com.icpizza.backend.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record StatsResponse(
         @JsonProperty("pick_up_total_revenue")
@@ -30,6 +31,7 @@ public record StatsResponse(
         @JsonProperty("jahez_total_order_count")
         Long totalJahezOrderCount,
         @JsonProperty("jahez_total_revenue")
-        BigDecimal totalJahezRevenue
+        BigDecimal totalJahezRevenue,
+        List<DoughUsageTO> doughUsageTOS
 ) {
 }

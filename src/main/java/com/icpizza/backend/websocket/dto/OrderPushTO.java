@@ -20,7 +20,8 @@ public record OrderPushTO(
         @JsonProperty("external_id") Long externalId,
         @JsonProperty("items") List<ItemTO> items,
         Boolean isPaid,
-        String status
+        String status,
+        Integer estimation
 ) {
     public record ItemTO(
             String name,

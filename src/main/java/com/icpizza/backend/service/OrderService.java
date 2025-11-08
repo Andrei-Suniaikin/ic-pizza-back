@@ -226,7 +226,7 @@ public class OrderService {
     }
 
     @Transactional
-    public void editOrder(EditOrderTO editOrderTO) {
+    public EditOrderResponse editOrder(EditOrderTO editOrderTO) {
         Order orderToEdit = orderRepo.findById(editOrderTO.orderId())
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found".formatted(editOrderTO.orderId())));
 
@@ -262,6 +262,8 @@ public class OrderService {
         comboItemRepo.saveAll(allComboItems);
 
         orderPostProcessor.onOrderEdited(new OrderPostProcessor.OrderEditedEvent(orderToEdit, savedItems, allComboItems));
+
+        return new EditOrderResponse(orderToEdit.getId());
     }
 
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {

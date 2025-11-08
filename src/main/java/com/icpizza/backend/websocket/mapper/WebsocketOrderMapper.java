@@ -74,7 +74,8 @@ public class WebsocketOrderMapper {
                 order.getExternalId(),
                 itemTOs,
                 order.getIsPaid(),
-                order.getStatus()
+                order.getStatus(),
+                order.getEstimation()
         );
     }
 

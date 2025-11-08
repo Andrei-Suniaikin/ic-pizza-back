@@ -1,5 +1,6 @@
 package com.icpizza.backend.service;
 
+import com.icpizza.backend.dto.DoughUsageTO;
 import com.icpizza.backend.dto.StatsResponse;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
@@ -16,6 +17,8 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -27,6 +30,7 @@ public class StatsService {
 
     @Transactional(readOnly = true)
     public StatsResponse getStatistics(LocalDate startDate, LocalDate finishDate, LocalDate certainDate) {
+        log.info("Getting Stats...");
         LocalDateTime start = startDate.atStartOfDay(BAHRAIN).toLocalDateTime().plusHours(2);
         LocalDateTime end   = finishDate.plusDays(1).atStartOfDay(BAHRAIN).toLocalDateTime()
                 .plusHours(1).plusMinutes(59).plusSeconds(59);
@@ -88,8 +92,31 @@ public class StatsService {
                 retained,
                 retentionPct,
                 jahezOrders,
-                jahezRevenue
+                jahezRevenue,
+                getDoughUsage()
         );
+    }
+
+    private List<DoughUsageTO> getDoughUsage() {
+        var rawUsage = orderRepo.getRawDoughUsage();
+        log.debug("[STATS] getDoughUsage: " + rawUsage.toString());
+        List<DoughUsageTO> doughUsage = new ArrayList<>();
+
+        for(Object[] t: rawUsage) {
+            doughUsage.add(new DoughUsageTO(
+                    (String) t[0],
+                    ((Number) t[1]).intValue(),
+                    ((Number) t[2]).intValue(),
+                    ((Number) t[3]).intValue(),
+                    ((Number) t[4]).intValue(),
+                    ((Number) t[5]).intValue(),
+                    ((Number) t[6]).intValue(),
+                    ((Number) t[7]).intValue()
+            ));
+        }
+        log.info("[DOUGH STATS] " + doughUsage.toString());
+
+        return doughUsage;
     }
 
     private static BigDecimal nvl(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }
