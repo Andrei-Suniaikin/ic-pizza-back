@@ -150,7 +150,7 @@ public class OrderMapper {
                 order.getId(),
                 telephoneNo,
                 name,
-                id,
+//                id,
                 order.getAmountPaid(),
                 toOrderItemsTO(items),
                 order.getPaymentType(),

@@ -105,50 +105,47 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Long> findActiveOrderIdsByBranch(@Param("branchNumber") int branchNumber);
 
     @Query(value = """
-        WITH dough_data AS (
-                SELECT
-                    CASE
-                        WHEN (
-                            (i.size = 'S')
-                            OR (i.size = 'M' AND i.is_thin_dough = TRUE)
-                            OR (i.name = 'Pizza Combo' AND ((i.size = 'S') OR (i.size = 'M' AND i.is_thin_dough = TRUE)))
-                        ) THEN 'S Dough'
-                        WHEN (
-                            (i.size = 'M')
-                            OR (i.size = 'L' AND i.is_thin_dough = TRUE)
-                            OR (i.name = 'Pizza Combo' AND ((i.size = 'M') OR (i.size = 'L' AND i.is_thin_dough = TRUE)))
-                        ) THEN 'M Dough'
-                        WHEN (
-                            (i.size = 'L' AND i.is_thin_dough = FALSE)
-                            OR (i.name = 'Pizza Combo' AND (i.size = 'L' AND i.is_thin_dough = FALSE))
-                        ) THEN 'L Dough'
-                        WHEN (
-                            i.category = 'Brick Pizzas'
-                            OR i.name = 'Detroit Combo'
-                        ) THEN 'Brick Dough'
-                        ELSE 'Other'
-                    END AS dough_type,
-                    /* день считается с 02:00 до 02:00 следующего дня */
-                    DATE_TRUNC('day', o.created_at - INTERVAL '2 hour')::date AS dough_day
-                FROM public.order_items i
-                JOIN public.orders o ON i.order_id = o.id
-                WHERE
-                    o.created_at >= NOW() - INTERVAL '10 days'
-                    AND i.category IN ('Pizzas', 'Combo Deals', 'Brick Pizzas')
-            )
-            SELECT
-                dough_type AS doughType,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '7 days' THEN 1 END), 0) AS fr,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '6 days' THEN 1 END), 0) AS sa,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '5 days' THEN 1 END), 0) AS su,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '4 days' THEN 1 END), 0) AS mo,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '3 days' THEN 1 END), 0) AS tu,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '2 days' THEN 1 END), 0) AS we,
-                COALESCE(SUM(CASE WHEN dough_day = CURRENT_DATE - INTERVAL '1 days' THEN 1 END), 0) AS th
-            FROM dough_data
-            GROUP BY dough_type
-            ORDER BY dough_type
+WITH anchor AS (
+  SELECT date_trunc('day', now() - interval '2 hours')::date AS biz_today
+),
+dough_data AS (
+  SELECT
+    CASE
+      WHEN ((i.size = 'S')
+         OR (i.size = 'M' AND i.is_thin_dough = TRUE)
+         OR (i.name = 'Pizza Combo' AND ((i.size = 'S') OR (i.size = 'M' AND i.is_thin_dough = TRUE)))
+      ) THEN 'S Dough'
+      WHEN ((i.size = 'M')
+         OR (i.size = 'L' AND i.is_thin_dough = TRUE)
+         OR (i.name = 'Pizza Combo' AND ((i.size = 'M') OR (i.size = 'L' AND i.is_thin_dough = TRUE)))
+      ) THEN 'M Dough'
+      WHEN ((i.size = 'L' AND i.is_thin_dough = FALSE)
+         OR (i.name = 'Pizza Combo' AND (i.size = 'L' AND i.is_thin_dough = FALSE))
+      ) THEN 'L Dough'
+      WHEN (i.category = 'Brick Pizzas' OR i.name = 'Detroit Combo') THEN 'Brick Dough'
+      ELSE 'Other'
+    END AS dough_type,
+    (o.created_at - interval '2 hours')::date AS shift_date
+  FROM public.order_items i
+  JOIN public.orders o ON o.id = i.order_id
+  WHERE i.category IN ('Pizzas','Combo Deals','Brick Pizzas')
+),
+bounds AS (
+  SELECT (biz_today - interval '7 days')::date AS from_day,
+         (biz_today - interval '1 day')::date AS to_day
+  FROM anchor
+)
+SELECT
+  dd.dough_type AS doughType,
+  dd.shift_date AS shiftDate,
+  COUNT(*)      AS qty
+FROM dough_data dd
+JOIN bounds b ON TRUE
+WHERE dd.shift_date BETWEEN b.from_day AND b.to_day
+GROUP BY dd.dough_type, dd.shift_date
+ORDER BY dd.dough_type, dd.shift_date
 """, nativeQuery = true)
     List<Object[]> getRawDoughUsage();
 
-    }
+
+}

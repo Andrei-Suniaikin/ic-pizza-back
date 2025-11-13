@@ -64,8 +64,10 @@ public class ConsumptionService {
 
         Set<Long> purchIds = productRepository.findIdsByPurchasableTrue();
         Map<Long, ProductInfo> previousInventory  = productsFromPreviousInventory(branchId, prevPrefix, purchIds);
+        log.info(previousInventory.toString());
         Map<Long, ProductInfo> currentInventory = productsFromCurrentInventory(branchId, curPrefix,  purchIds);
-        Map<Long, ProductInfo> purchases   = purchases(branchId, curPrefix, purchIds);
+        Map<Long, ProductInfo> purchases  = purchases(branchId, curPrefix, purchIds);
+        log.info(purchases.toString());
 
         Set<Long> keys = new HashSet<>();
         keys.addAll(previousInventory.keySet()); keys.addAll(currentInventory.keySet()); keys.addAll(purchases.keySet());

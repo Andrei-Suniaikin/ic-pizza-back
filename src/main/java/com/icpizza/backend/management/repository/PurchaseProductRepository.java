@@ -16,7 +16,7 @@ public interface PurchaseProductRepository extends JpaRepository<PurchaseProduct
     List<PurchaseProduct> findAllByPurchaseReport(@Param("purchaseReportId") Long id);
 
     @Query("""
-    SELECT new com.icpizza.backend.management.dto.ProductInfo(pp.product.id, SUM(pp.quantity), SUM(pp.quantity * pp.finalPrice))
+    SELECT new com.icpizza.backend.management.dto.ProductInfo(pp.product.id, SUM(pp.quantity), SUM(pp.finalPrice))
     FROM PurchaseProduct pp
     WHERE pp.report.id = :reportId
       AND pp.product.id IN :productIds
