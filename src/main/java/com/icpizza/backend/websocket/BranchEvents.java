@@ -1,5 +1,8 @@
 package com.icpizza.backend.websocket;
+import com.icpizza.backend.dto.BaseAdminResponse;
 import com.icpizza.backend.dto.UpdateWorkLoadLevelTO;
+import com.icpizza.backend.enums.EventType;
+import com.icpizza.backend.enums.WorkLoadLevel;
 import com.icpizza.backend.websocket.mapper.WebsocketOrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,29 +22,50 @@ public class BranchEvents {
     private final Map<Long, Integer> attempts = new ConcurrentHashMap<>();
     private final @Qualifier("orderAckScheduler") ThreadPoolTaskScheduler scheduler;
 
-    private final Map<UpdateWorkLoadLevelTO, ScheduledFuture<?>> pendingWorkloadUpdate = new ConcurrentHashMap<>();
+    private final Map<BaseAdminResponse, ScheduledFuture<?>> pendingWorkloadUpdate = new ConcurrentHashMap<>();
     private static final int MAX_ATTEMPTS = 2;
 
-    public void pushWorkloadLevelChange(UpdateWorkLoadLevelTO updateWorkLoadLevelTO){
-        int branchNumber = updateWorkLoadLevelTO.branchNumber();
-        String dest = "/topic/workload-level-change";
-        ws.convertAndSend(dest, updateWorkLoadLevelTO);
+//    public void pushWorkloadLevelChange(UpdateWorkLoadLevelTO updateWorkLoadLevelTO){
+//        int branchNumber = updateWorkLoadLevelTO.branchNumber();
+//        String dest = "/topic/workload-level-change";
+//        ws.convertAndSend(dest, updateWorkLoadLevelTO);
+//
+//        attempts.putIfAbsent(Long.valueOf(branchNumber), 0);
+//        ScheduledFuture<?> future = scheduler.schedule(() -> {
+//            int prev = attempts.getOrDefault(Long.valueOf(branchNumber), 0);
+//            if (prev >= MAX_ATTEMPTS) {
+//                pendingWorkloadUpdate.remove(Long.valueOf(branchNumber));
+//                attempts.remove(Long.valueOf(branchNumber));
+//                return;
+//            }
+//            attempts.put(Long.valueOf(branchNumber), prev + 1);
+//            ws.convertAndSend(dest, updateWorkLoadLevelTO);
+//            ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
+//            pendingWorkloadUpdate.put(updateWorkLoadLevelTO, again);
+//        }, new java.util.Date(System.currentTimeMillis() + 3000));
+//
+//        pendingWorkloadUpdate.put(updateWorkLoadLevelTO, future);
+//    }
 
-        attempts.putIfAbsent(Long.valueOf(branchNumber), 0);
+    public void onAdminBaseInfoChange(BaseAdminResponse baseAdminResponse) {
+        String dest = "/topic/admin-base-info";
+        ws.convertAndSend(dest, baseAdminResponse);
+
+        attempts.putIfAbsent(Long.valueOf(baseAdminResponse.branchNumber()), 0);
         ScheduledFuture<?> future = scheduler.schedule(() -> {
-            int prev = attempts.getOrDefault(Long.valueOf(branchNumber), 0);
+            int prev = attempts.getOrDefault(Long.valueOf(baseAdminResponse.branchNumber()), 0);
             if (prev >= MAX_ATTEMPTS) {
-                pendingWorkloadUpdate.remove(Long.valueOf(branchNumber));
-                attempts.remove(Long.valueOf(branchNumber));
+                pendingWorkloadUpdate.remove(Long.valueOf(baseAdminResponse.branchNumber()));
+                attempts.remove(Long.valueOf(baseAdminResponse.branchNumber()));
                 return;
             }
-            attempts.put(Long.valueOf(branchNumber), prev + 1);
-            ws.convertAndSend(dest, updateWorkLoadLevelTO);
+            attempts.put(Long.valueOf(baseAdminResponse.branchNumber()), prev + 1);
+            ws.convertAndSend(dest, baseAdminResponse);
             ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
-            pendingWorkloadUpdate.put(updateWorkLoadLevelTO, again);
+            pendingWorkloadUpdate.put(baseAdminResponse, again);
         }, new java.util.Date(System.currentTimeMillis() + 3000));
 
-        pendingWorkloadUpdate.put(updateWorkLoadLevelTO, future);
+        pendingWorkloadUpdate.put(baseAdminResponse, future);
     }
 
     private void noop() {}

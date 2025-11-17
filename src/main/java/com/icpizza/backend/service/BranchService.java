@@ -1,19 +1,23 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.BranchTO;
-import com.icpizza.backend.dto.UpdateWorkLoadLevelTO;
+import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.Branch;
+import com.icpizza.backend.entity.Event;
+import com.icpizza.backend.enums.EventType;
 import com.icpizza.backend.enums.WorkLoadLevel;
-import com.icpizza.backend.repository.BranchRepository;
-import com.icpizza.backend.repository.OrderItemRepository;
-import com.icpizza.backend.repository.OrderRepository;
+import com.icpizza.backend.repository.*;
 import com.icpizza.backend.websocket.BranchEvents;
-import com.icpizza.backend.websocket.OrderEvents;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +29,10 @@ public class BranchService {
     private final OrderItemRepository orderItemRepository;
     private final BranchRepository branchRepository;
     private final BranchEvents branchEvents;
+    private final EventRepository eventRepository;
+    private final TransactionRepository transactionRepository;
+
+    private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
 
     List<String> categories = List.of("Pizzas", "Combo Deals", "Brick Pizzas");
 
@@ -56,8 +64,8 @@ public class BranchService {
             branch.setWorkLoadLevel(newLevel);
             branchRepository.save(branch);
             log.info("[BRANCH WORKLOAD] new level set to "+newLevel+"");
-            UpdateWorkLoadLevelTO updateWorkLoadLevelTO = new UpdateWorkLoadLevelTO(newLevel, branch.getBranchNumber());
-            branchEvents.pushWorkloadLevelChange(updateWorkLoadLevelTO);
+
+            branchEvents.onAdminBaseInfoChange(getAdminBaseInfo(branch.getBranchNumber()));
         }
 
     }
@@ -78,7 +86,8 @@ public class BranchService {
 
         branch.setWorkLoadLevel(updateWorkLoadLevelTO.level());
         branchRepository.save(branch);
-        branchEvents.pushWorkloadLevelChange(updateWorkLoadLevelTO);
+        BaseAdminResponse baseAdminResponse = getAdminBaseInfo(updateWorkLoadLevelTO.branchNumber());
+        branchEvents.onAdminBaseInfoChange(baseAdminResponse);
         return true;
     }
 
@@ -94,5 +103,87 @@ public class BranchService {
     public BranchTO getBranchInfo(Integer branchNumber) {
         Branch branch = branchRepository.findByBranchNumber(branchNumber);
         return new BranchTO(branch.getId(), branch.getExternalId(), branchNumber, branch.getBranchName());
+    }
+
+    public BaseAdminResponse getAdminBaseInfo(Integer branchNumber) {
+        log.info("[ADMIN BASE INFO] getAdminBaseInfo "+branchNumber);
+        WorkLoadLevel level = getWorkLoadLevel(branchNumber);
+        EventType type = getLastStage(branchNumber.toString());
+        log.info("[BRANCH ADMIN BASE INFO]" + level + type);
+
+        return new BaseAdminResponse(level, type, branchNumber);
+    }
+
+    @Transactional
+    public ShiftEventResponse createEvent(ShiftEventRequest request){
+        if (request == null || request.branchId() == null || request.type() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "branch_id and type are required");
+        }
+
+        Integer lastShiftNo = eventRepository.findLastShiftNo(request.branchId());
+        int shiftNo;
+
+        if(request.type() == EventType.OPEN_SHIFT_CASH_CHECK){
+            shiftNo = (lastShiftNo == null ? 0 : lastShiftNo) + 1;
+        }
+        else{
+            if (lastShiftNo == null || lastShiftNo == 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "no shift started yet");
+            }
+            shiftNo = lastShiftNo;
+        }
+
+        ShiftEventResponse.CashWarning warning = null;
+        if (request.type() == EventType.CLOSE_SHIFT_CASH_CHECK) {
+            if (request.cashAmount() != null) {
+                Event open = eventRepository
+                        .findTopByBranchIdAndTypeAndShiftNoOrderByDatetimeDesc(request.branchId(),
+                                EventType.OPEN_SHIFT_CASH_CHECK, shiftNo)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "open shift not found"));
+
+                LocalDateTime from = open.getDatetime();
+                LocalDateTime to = LocalDateTime.now(BAHRAIN);
+
+                BigDecimal initialCash = open.getCashAmount() == null
+                        ? BigDecimal.ZERO
+                        : open.getCashAmount();
+
+                Branch branch = branchRepository.findByBranchNumber(1);
+
+                BigDecimal cashTransactions = transactionRepository.sumCashBetween(from, to, branch.getId());
+                if (cashTransactions == null) cashTransactions = BigDecimal.ZERO;
+
+                BigDecimal expected = initialCash.add(cashTransactions).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal entered = request.cashAmount().setScale(2, RoundingMode.HALF_UP);
+
+                if (entered.compareTo(expected) != 0) {
+                    warning = new ShiftEventResponse.CashWarning("Amounts doesn't match", expected);
+                }
+            }
+        }
+
+        Event ev = new Event();
+        ev.setId(java.util.UUID.randomUUID().toString());
+        ev.setType(request.type());
+        ev.setDatetime(LocalDateTime.now(BAHRAIN));
+        ev.setPrepPlan(request.prepPlan());
+        ev.setCashAmount(request.cashAmount());
+        ev.setBranchId(request.branchId());
+        ev.setShiftNo(shiftNo);
+
+        eventRepository.save(ev);
+
+        BaseAdminResponse baseAdminResponse = getAdminBaseInfo(Integer.valueOf(request.branchId()));
+
+        branchEvents.onAdminBaseInfoChange(baseAdminResponse);
+
+        return new ShiftEventResponse("created", ev.getId(), shiftNo, warning);
+    }
+
+    public EventType getLastStage(String branchId) {
+        Event event = eventRepository.findFirstByBranchIdOrderByDatetimeDescIdDesc(branchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        return event.getType();
     }
 }

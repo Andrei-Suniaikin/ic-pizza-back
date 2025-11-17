@@ -5,6 +5,7 @@ import com.icpizza.backend.entity.User;
 import com.icpizza.backend.management.dto.*;
 import com.icpizza.backend.management.entity.InventoryProduct;
 import com.icpizza.backend.management.entity.Product;
+import com.icpizza.backend.management.entity.ProductConsumptionItem;
 import com.icpizza.backend.management.entity.Report;
 import com.icpizza.backend.management.repository.InventoryProductRepository;
 import com.icpizza.backend.management.repository.ProductRepository;
@@ -138,6 +139,28 @@ public class ReportMapper {
                 report.getBranch().getBranchNumber(),
                 report.getUser().getUserName(),
                 report.getFinalPrice()
+        );
+    }
+
+    public ConsumptionReportTO toConsumptionReportTO(Report report, List<ProductConsumptionItem> products) {
+        return new ConsumptionReportTO(
+                report.getId(),
+                report.getTitle(),
+                report.getFinalPrice(),
+                report.getUser().getId(),
+                report.getBranch().getBranchNumber(),
+                products
+                        .stream()
+                        .map((this::toConsumptionProductTO
+                )).toList()
+        );
+    }
+
+    private ConsumptionReportTO.ConsumptionProductTO toConsumptionProductTO(ProductConsumptionItem product) {
+         return new ConsumptionReportTO.ConsumptionProductTO(
+            product.getProduct().getName(),
+                 product.getUsage(),
+                 product.getPrice()
         );
     }
 }

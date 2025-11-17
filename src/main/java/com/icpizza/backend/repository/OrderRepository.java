@@ -104,4 +104,48 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o.id FROM Order o WHERE o.branch.branchNumber = :branchNumber AND o.status = 'Kitchen Phase'")
     List<Long> findActiveOrderIdsByBranch(@Param("branchNumber") int branchNumber);
 
-    }
+    @Query(value = """
+WITH anchor AS (
+  SELECT date_trunc('day', now() - interval '2 hours')::date AS biz_today
+),
+dough_data AS (
+  SELECT
+    CASE
+      WHEN ((i.size = 'S')
+         OR (i.size = 'M' AND i.is_thin_dough = TRUE)
+         OR (i.name = 'Pizza Combo' AND ((i.size = 'S') OR (i.size = 'M' AND i.is_thin_dough = TRUE)))
+      ) THEN 'S Dough'
+      WHEN ((i.size = 'M')
+         OR (i.size = 'L' AND i.is_thin_dough = TRUE)
+         OR (i.name = 'Pizza Combo' AND ((i.size = 'M') OR (i.size = 'L' AND i.is_thin_dough = TRUE)))
+      ) THEN 'M Dough'
+      WHEN ((i.size = 'L' AND i.is_thin_dough = FALSE)
+         OR (i.name = 'Pizza Combo' AND (i.size = 'L' AND i.is_thin_dough = FALSE))
+      ) THEN 'L Dough'
+      WHEN (i.category = 'Brick Pizzas' OR i.name = 'Detroit Combo') THEN 'Brick Dough'
+      ELSE 'Other'
+    END AS dough_type,
+    (o.created_at - interval '2 hours')::date AS shift_date
+  FROM public.order_items i
+  JOIN public.orders o ON o.id = i.order_id
+  WHERE i.category IN ('Pizzas','Combo Deals','Brick Pizzas')
+),
+bounds AS (
+  SELECT (biz_today - interval '7 days')::date AS from_day,
+         (biz_today - interval '1 day')::date AS to_day
+  FROM anchor
+)
+SELECT
+  dd.dough_type AS doughType,
+  dd.shift_date AS shiftDate,
+  COUNT(*)      AS qty
+FROM dough_data dd
+JOIN bounds b ON TRUE
+WHERE dd.shift_date BETWEEN b.from_day AND b.to_day
+GROUP BY dd.dough_type, dd.shift_date
+ORDER BY dd.dough_type, dd.shift_date
+""", nativeQuery = true)
+    List<Object[]> getRawDoughUsage();
+
+
+}

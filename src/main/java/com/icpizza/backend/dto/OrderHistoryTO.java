@@ -15,6 +15,7 @@ public record OrderHistoryTO(
         @JsonProperty("customer_name") String customerName,
         @JsonProperty("order_created") String orderCreated,
         @JsonProperty("payment_type") String paymentType,
+        Long external_id,
         String notes,
         List<OrderItemHistoryTO> items
 ){

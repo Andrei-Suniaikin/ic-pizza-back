@@ -5,8 +5,6 @@ import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.entity.ComboItem;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
-import com.icpizza.backend.repository.OrderItemRepository;
-import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.tiktok.service.TikTokService;
 import com.icpizza.backend.websocket.OrderEvents;
 import com.icpizza.backend.whatsapp.service.WhatsAppService;

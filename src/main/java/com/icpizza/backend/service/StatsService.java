@@ -1,5 +1,6 @@
 package com.icpizza.backend.service;
 
+import com.icpizza.backend.dto.DoughUsageTO;
 import com.icpizza.backend.dto.StatsResponse;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
@@ -12,10 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -27,6 +30,7 @@ public class StatsService {
 
     @Transactional(readOnly = true)
     public StatsResponse getStatistics(LocalDate startDate, LocalDate finishDate, LocalDate certainDate) {
+        log.info("Getting Stats...");
         LocalDateTime start = startDate.atStartOfDay(BAHRAIN).toLocalDateTime().plusHours(2);
         LocalDateTime end   = finishDate.plusDays(1).atStartOfDay(BAHRAIN).toLocalDateTime()
                 .plusHours(1).plusMinutes(59).plusSeconds(59);
@@ -88,8 +92,65 @@ public class StatsService {
                 retained,
                 retentionPct,
                 jahezOrders,
-                jahezRevenue
+                jahezRevenue,
+                getDoughUsage()
         );
+    }
+
+    private List<DoughUsageTO> getDoughUsage() {
+        var rawUsage = orderRepo.getRawDoughUsage();
+        log.debug("[STATS] getDoughUsage: " + rawUsage.toString());
+
+        class Counters {final int[] range = new int[7];}
+
+        Map<String, Counters> acc = new LinkedHashMap<>();
+
+        for (Object[] row : rawUsage) {
+            String doughType = (String) row[0];
+
+            LocalDate shiftDate;
+
+            Object d = row[1];
+            if (d instanceof java.sql.Date sqlDate) {
+                shiftDate = sqlDate.toLocalDate();
+            }
+            else if (d instanceof java.sql.Timestamp timestamp) {
+                shiftDate = timestamp.toLocalDateTime().toLocalDate();
+            }
+            else if (d instanceof LocalDate ld) {
+                shiftDate = ld;
+            }
+            else {
+                throw new IllegalStateException("Unexpected date type: " + d);
+            }
+            int qty = ((Number) row[2]).intValue();
+
+            int idx = switch (shiftDate.getDayOfWeek()) {
+                case FRIDAY    -> 0;
+                case SATURDAY  -> 1;
+                case SUNDAY    -> 2;
+                case MONDAY    -> 3;
+                case TUESDAY   -> 4;
+                case WEDNESDAY -> 5;
+                case THURSDAY  -> 6;
+            };
+
+            acc.computeIfAbsent(doughType, k -> new Counters()).range[idx] += qty;
+        }
+
+        List<DoughUsageTO> doughUsage = new ArrayList<>(acc.size());
+        for (var e : acc.entrySet()) {
+            int[] c = e.getValue().range;
+            doughUsage.add(new DoughUsageTO(
+                    e.getKey(),
+                    c[0], c[1], c[2], c[3], c[4], c[5], c[6]
+            ));
+        }
+
+        log.info("[DOUGH STATS RAW] " + rawUsage.toString());
+        log.info("[DOUGH STATS DTO] " + doughUsage.toString());
+
+        return doughUsage;
     }
 
     private static BigDecimal nvl(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }

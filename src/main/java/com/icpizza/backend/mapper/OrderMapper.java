@@ -150,7 +150,7 @@ public class OrderMapper {
                 order.getId(),
                 telephoneNo,
                 name,
-                id,
+//                id,
                 order.getAmountPaid(),
                 toOrderItemsTO(items),
                 order.getPaymentType(),
@@ -224,6 +224,7 @@ public class OrderMapper {
                 customerName,
                 order.getCreatedAt().toString(),
                 order.getPaymentType(),
+                order.getExternalId(),
                 order.getNotes(),
                 itemHistoryTOList
         );

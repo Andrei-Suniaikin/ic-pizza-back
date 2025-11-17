@@ -17,8 +17,8 @@ public record CreateOrderTO (
         String telephoneNo,
         @JsonProperty("customer_name")
         String customerName,
-        @JsonProperty("user_id")
-        Long userId,
+//        @JsonProperty("user_id")
+//        Long userId,
         @JsonProperty("amount_paid")
         BigDecimal amountPaid,
         @JsonProperty("items")
