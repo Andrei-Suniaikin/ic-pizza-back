@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Table(name = "purchase_products")
 @Entity
@@ -29,6 +30,9 @@ public class PurchaseProduct {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Vendor vendor;
+
+    @Column(name="purchase_date")
+    private LocalDate purchaseDate;
 
     private BigDecimal finalPrice;
 }

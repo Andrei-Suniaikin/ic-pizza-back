@@ -70,6 +70,7 @@ public class PurchaseMapper {
                         purchaseProduct.setQuantity(productTO.quantity());
                         purchaseProduct.setPrice(productTO.price());
                         purchaseProduct.setFinalPrice(productTO.finalPrice());
+                        purchaseProduct.setPurchaseDate(productTO.purchaseDate());
                         return purchaseProduct;
                     }
                     catch (Exception e) {throw  new RuntimeException("Failed to map product");}
@@ -107,8 +108,9 @@ public class PurchaseMapper {
                                 purchaseProduct.getQuantity(),
                                 purchaseProduct.getFinalPrice(),
                                 purchaseProduct.getPrice(),
-                                purchaseProduct.getVendor().getVendorName()
-                        );
+                                purchaseProduct.getVendor().getVendorName(),
+                                purchaseProduct.getPurchaseDate()
+                                );
                 }).toList();
     }
 
@@ -138,6 +140,7 @@ public class PurchaseMapper {
                         purchaseProduct.setQuantity(productTO.quantity());
                         purchaseProduct.setPrice(productTO.price());
                         purchaseProduct.setFinalPrice(productTO.finalPrice());
+                        purchaseProduct.setPurchaseDate(productTO.purchaseDate());
                         return purchaseProduct;
                     }
                     catch (Exception e) {throw  new RuntimeException("Failed to map product");}

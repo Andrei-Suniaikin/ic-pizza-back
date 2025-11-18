@@ -1,13 +1,14 @@
 package com.icpizza.backend.dto;
 
+import java.time.LocalDate;
+import java.util.List;
+
 public record DoughUsageTO(
         String doughType,
-        int friday,
-        int saturday,
-        int sunday,
-        int monday,
-        int tuesday,
-        int wednesday,
-        int thursday
+        List<DoughDailyUsageTO> history
 ) {
+    public record DoughDailyUsageTO(
+            LocalDate date,
+            int quantity
+    ) {}
 }

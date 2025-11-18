@@ -1,6 +1,7 @@
 package com.icpizza.backend.management.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public record PurchaseTO(
@@ -16,7 +17,8 @@ public record PurchaseTO(
             BigDecimal quantity,
             BigDecimal finalPrice,
             BigDecimal price,
-            String vendorName
+            String vendorName,
+            LocalDate purchaseDate
     ) {
     }
 }

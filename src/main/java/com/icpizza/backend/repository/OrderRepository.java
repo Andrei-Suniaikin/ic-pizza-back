@@ -131,7 +131,7 @@ dough_data AS (
   WHERE i.category IN ('Pizzas','Combo Deals','Brick Pizzas')
 ),
 bounds AS (
-  SELECT (biz_today - interval '7 days')::date AS from_day,
+  SELECT (biz_today - interval '10 days')::date AS from_day,
          (biz_today - interval '1 day')::date AS to_day
   FROM anchor
 )

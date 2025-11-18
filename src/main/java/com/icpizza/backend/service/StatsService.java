@@ -101,56 +101,50 @@ public class StatsService {
         var rawUsage = orderRepo.getRawDoughUsage();
         log.debug("[STATS] getDoughUsage: " + rawUsage.toString());
 
-        class Counters {final int[] range = new int[7];}
+        Map<String, Map<LocalDate, Integer>> dataMap = new LinkedHashMap<>();
 
-        Map<String, Counters> acc = new LinkedHashMap<>();
+        LocalDate today = LocalDate.now().minusDays(1);
+        LocalDate minDate = today.minusDays(9);
 
-        for (Object[] row : rawUsage) {
-            String doughType = (String) row[0];
+        List<DoughUsageTO> doughUsage = new ArrayList<>();
 
-            LocalDate shiftDate;
+        for(Object[] row : rawUsage) {
+            String doughType = (String)row[0];
+            LocalDate date = convertToLocalDate(row[1]);
 
-            Object d = row[1];
-            if (d instanceof java.sql.Date sqlDate) {
-                shiftDate = sqlDate.toLocalDate();
-            }
-            else if (d instanceof java.sql.Timestamp timestamp) {
-                shiftDate = timestamp.toLocalDateTime().toLocalDate();
-            }
-            else if (d instanceof LocalDate ld) {
-                shiftDate = ld;
-            }
-            else {
-                throw new IllegalStateException("Unexpected date type: " + d);
-            }
-            int qty = ((Number) row[2]).intValue();
+            int quantity = ((Number) row[2]).intValue();
 
-            int idx = switch (shiftDate.getDayOfWeek()) {
-                case FRIDAY    -> 0;
-                case SATURDAY  -> 1;
-                case SUNDAY    -> 2;
-                case MONDAY    -> 3;
-                case TUESDAY   -> 4;
-                case WEDNESDAY -> 5;
-                case THURSDAY  -> 6;
-            };
-
-            acc.computeIfAbsent(doughType, k -> new Counters()).range[idx] += qty;
+            dataMap.computeIfAbsent(doughType, k -> new LinkedHashMap<>())
+                    .put(date, quantity);
         }
 
-        List<DoughUsageTO> doughUsage = new ArrayList<>(acc.size());
-        for (var e : acc.entrySet()) {
-            int[] c = e.getValue().range;
-            doughUsage.add(new DoughUsageTO(
-                    e.getKey(),
-                    c[0], c[1], c[2], c[3], c[4], c[5], c[6]
-            ));
-        }
+        for(String doughType : dataMap.keySet()) {
+            List<DoughUsageTO.DoughDailyUsageTO> dailyUsage = new ArrayList<>();
+            Map<LocalDate, Integer> amountOfDoughPerEachDay = dataMap.get(doughType);
 
-        log.info("[DOUGH STATS RAW] " + rawUsage.toString());
-        log.info("[DOUGH STATS DTO] " + doughUsage.toString());
+            minDate.datesUntil(today.plusDays(1)).forEach(date -> {
+                int quantity = amountOfDoughPerEachDay.get(date)!=null ? amountOfDoughPerEachDay.get(date) : 0;
+                dailyUsage.add(new DoughUsageTO.DoughDailyUsageTO(date, quantity));
+            });
+
+            doughUsage.add(new DoughUsageTO(doughType, dailyUsage));
+        }
+        log.info("[STATS] getDoughUsage: " + doughUsage.toString());
 
         return doughUsage;
+    }
+
+    private LocalDate convertToLocalDate(Object d) {
+        if (d == null) return LocalDate.now();
+        if (d instanceof java.sql.Date sqlDate) {
+            return sqlDate.toLocalDate();
+        } else if (d instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime().toLocalDate();
+        } else if (d instanceof LocalDate ld) {
+            return ld;
+        } else {
+            throw new IllegalStateException("Unexpected date type: " + d.getClass());
+        }
     }
 
     private static BigDecimal nvl(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }

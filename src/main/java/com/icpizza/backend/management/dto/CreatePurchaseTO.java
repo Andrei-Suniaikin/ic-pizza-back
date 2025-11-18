@@ -17,6 +17,7 @@ public record CreatePurchaseTO(
             BigDecimal quantity,
             BigDecimal finalPrice,
             BigDecimal price,
-            String vendorName
+            String vendorName,
+            LocalDate purchaseDate
     ){}
 }

@@ -17,7 +17,8 @@ public record EditPurchaseTO(
             BigDecimal quantity,
             BigDecimal finalPrice,
             BigDecimal price,
-            String vendorName
+            String vendorName,
+            LocalDate purchaseDate
     ) {
     }
 }
