@@ -108,10 +108,11 @@ public class BranchService {
     public BaseAdminResponse getAdminBaseInfo(Integer branchNumber) {
         log.info("[ADMIN BASE INFO] getAdminBaseInfo "+branchNumber);
         WorkLoadLevel level = getWorkLoadLevel(branchNumber);
-        EventType type = getLastStage(branchNumber.toString());
-        log.info("[BRANCH ADMIN BASE INFO]" + level + type);
+        EventType cashType = getLastCashStage(branchNumber.toString());
+        EventType shiftType = getLastShiftStage(branchNumber.toString());
+        log.info("[BRANCH ADMIN BASE INFO]" + level + cashType + shiftType);
 
-        return new BaseAdminResponse(level, type, branchNumber);
+        return new BaseAdminResponse(level, cashType, shiftType, branchNumber);
     }
 
     @Transactional
@@ -180,8 +181,15 @@ public class BranchService {
         return new ShiftEventResponse("created", ev.getId(), shiftNo, warning);
     }
 
-    public EventType getLastStage(String branchId) {
-        Event event = eventRepository.findFirstByBranchIdOrderByDatetimeDescIdDesc(branchId)
+    public EventType getLastCashStage(String branchId) {
+        Event event = eventRepository.findFirstByBranchIdAndCashAmountIsNotNullOrderByDatetimeDescIdDesc(branchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        return event.getType();
+    }
+
+    public EventType getLastShiftStage(String branchId) {
+        Event event = eventRepository.findFirstByBranchIdAndCashAmountIsNullOrderByDatetimeDescIdDesc(branchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         return event.getType();

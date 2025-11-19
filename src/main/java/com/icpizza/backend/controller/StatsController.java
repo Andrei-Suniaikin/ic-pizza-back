@@ -20,7 +20,6 @@ public class StatsController {
     public ResponseEntity<StatsResponse> getStatistics(@RequestParam("start_date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                                                        @RequestParam("finish_date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate finishDate,
                                                        @RequestParam(value = "certain_date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate certainDate){
-        System.out.println(statsService.getStatistics(startDate, finishDate, certainDate));
         return new ResponseEntity<>(statsService.getStatistics(startDate, finishDate, certainDate),
                                                                 HttpStatus.OK);
     }

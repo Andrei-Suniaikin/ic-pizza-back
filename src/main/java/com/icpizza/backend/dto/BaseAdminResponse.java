@@ -5,7 +5,8 @@ import com.icpizza.backend.enums.WorkLoadLevel;
 
 public record BaseAdminResponse(
         WorkLoadLevel level,
-        EventType type,
+        EventType cashStage,
+        EventType checklistStage,
         Integer branchNumber
 ) {
 }

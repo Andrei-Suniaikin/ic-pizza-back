@@ -14,5 +14,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Optional<Event> findTopByBranchIdAndTypeAndShiftNoOrderByDatetimeDesc(
             String branchId, EventType type, Integer shiftNo);
 
-    Optional<Event> findFirstByBranchIdOrderByDatetimeDescIdDesc(String branchId);
+    Optional<Event> findFirstByBranchIdAndCashAmountIsNullOrderByDatetimeDescIdDesc(String branchId);
+
+    Optional<Event> findFirstByBranchIdAndCashAmountIsNotNullOrderByDatetimeDescIdDesc(String branchId);
 }
