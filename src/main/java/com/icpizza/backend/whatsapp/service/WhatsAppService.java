@@ -271,10 +271,19 @@ public class WhatsAppService {
                 .replaceAll(" {5,}", "    ")
                 .trim();
 
-        String clientInfo = (org.springframework.util.StringUtils.hasText(name) ? (telephoneNo + " (" + name + ")") : telephoneNo)
+        String raw = StringUtils.hasText(telephoneNo)
+                ? telephoneNo + (StringUtils.hasText(name) ? (" (" + name + ")") : "")
+                : "";
+
+        String clientInfo = raw
                 .replaceAll("[\\r\\n\\t]+", " ")
                 .replaceAll(" {5,}", "    ")
                 .trim();
+
+//        String clientInfo = (org.springframework.util.StringUtils.hasText(name) ? (telephoneNo + " (" + name + ")") : telephoneNo)
+//                .replaceAll("[\\r\\n\\t]+", " ")
+//                .replaceAll(" {5,}", "    ")
+//                .trim();
 
         String orderInline = (messageBody == null ? "" : messageBody)
                 .replace("\t", " ")
