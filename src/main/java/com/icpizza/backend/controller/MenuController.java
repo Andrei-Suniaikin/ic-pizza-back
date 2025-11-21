@@ -33,13 +33,14 @@ public class MenuController {
 
 
         if (userId != null && !userId.isBlank()) {
-            var user = customerRepository.findByTelephoneNo(userId);
-            var userInfo = Map.of(
-                    "name", user.map(Customer::getName).filter(n -> n != null && !n.isBlank())
-                            .orElse("Unknown user"),
-                    "phone", userId
-            );
-            resp.put("userInfo", userInfo);
+            Customer user = customerRepository.findByUserId(userId);
+            if (user != null) {
+                var userInfo = Map.of(
+                        "name", user.getName() == null ? "Unknown User" : user.getName(),
+                        "phone", user.getTelephoneNo()
+                );
+                resp.put("userInfo", userInfo);
+            }
         }
 
         return resp;

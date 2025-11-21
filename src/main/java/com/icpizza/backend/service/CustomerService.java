@@ -5,9 +5,11 @@ import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -17,6 +19,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerService {
     private final CustomerRepository customerRepository;
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
@@ -52,7 +55,7 @@ public class CustomerService {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         customer.setLastOrder(LocalDateTime.now(BAHRAIN).format(fmt));
         customerRepository.save(customer);
-        System.out.println("Updated values : " + customer.getAmountOfOrders() + customer.getAmountPaid());
+        log.info("Updated values : " + customer.getAmountOfOrders() + customer.getAmountPaid());
     }
 
     public Customer createWatsappCustomer(String senderPhone) {
@@ -60,6 +63,7 @@ public class CustomerService {
         customer.setTelephoneNo(senderPhone);
         customer.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
         customer.setWaitingForName(1);
+        customer.setAmountPaid(BigDecimal.ZERO);
         customerRepository.save(customer);
         return customer;
     }

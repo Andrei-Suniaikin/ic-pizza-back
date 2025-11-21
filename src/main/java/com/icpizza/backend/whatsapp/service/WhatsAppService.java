@@ -271,14 +271,28 @@ public class WhatsAppService {
                 .replaceAll(" {5,}", "    ")
                 .trim();
 
-        String raw = StringUtils.hasText(telephoneNo)
-                ? telephoneNo + (StringUtils.hasText(name) ? (" (" + name + ")") : "")
-                : "";
+        String clientInfo = "";
 
-        String clientInfo = raw
-                .replaceAll("[\\r\\n\\t]+", " ")
-                .replaceAll(" {5,}", "    ")
-                .trim();
+        if (StringUtils.hasText(telephoneNo) || StringUtils.hasText(name)) {
+            String raw = "";
+
+            if (StringUtils.hasText(telephoneNo)) {
+                raw = telephoneNo;
+            }
+
+            if (StringUtils.hasText(name)) {
+                raw = StringUtils.hasText(telephoneNo)
+                        ? telephoneNo + " (" + name + ")"
+                        : name;
+            }
+
+            clientInfo = raw
+                    .replaceAll("[\\r\\n\\t]+", " ")
+                    .replaceAll(" {5,}", "    ")
+                    .trim();
+        } else {
+            clientInfo = "Unknown customer";
+        }
 
 //        String clientInfo = (org.springframework.util.StringUtils.hasText(name) ? (telephoneNo + " (" + name + ")") : telephoneNo)
 //                .replaceAll("[\\r\\n\\t]+", " ")

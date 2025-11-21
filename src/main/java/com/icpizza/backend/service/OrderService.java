@@ -66,15 +66,12 @@ public class OrderService {
             orderItemRepo.saveAllAndFlush(orderItems);
 
 
-
             log.info("[ORDER ITEMS]"+ orderItems+".");
             List<ComboItem> comboItems = orderMapper.toComboItems(orderTO, orderItems);
             if(comboItems!=null) comboItemRepo.saveAllAndFlush(comboItems);
 
 
             customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
-
-            orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
 
             return orderMapper.toCreateOrderTO(order, orderItems);
         }

@@ -34,7 +34,7 @@ public class Customer {
     private Integer amountOfOrders = 0;
 
     @Column(name = "amount_paid", precision = 38, scale = 2)
-    private BigDecimal amountPaid;
+    private BigDecimal amountPaid = BigDecimal.ZERO;
 
     @Column(name = "last_order", length = 255)
     private String lastOrder;
