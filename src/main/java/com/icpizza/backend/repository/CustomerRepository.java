@@ -3,6 +3,7 @@ package com.icpizza.backend.repository;
 import com.icpizza.backend.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -21,4 +22,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("select count(c) from Customer c where c.amountOfOrders > 1")
     long countRepeatCustomers();
+
+    @Query("""
+    select c from Customer c where c.id=:userId
+""")
+    Customer findByUserId(@Param("userId") String userId);
 }

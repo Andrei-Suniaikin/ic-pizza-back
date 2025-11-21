@@ -1,10 +1,7 @@
 package com.icpizza.backend.service;
 
 import com.icpizza.backend.dto.PushOrderStatusUpdated;
-import com.icpizza.backend.entity.Branch;
-import com.icpizza.backend.entity.ComboItem;
-import com.icpizza.backend.entity.Order;
-import com.icpizza.backend.entity.OrderItem;
+import com.icpizza.backend.entity.*;
 import com.icpizza.backend.tiktok.service.TikTokService;
 import com.icpizza.backend.websocket.OrderEvents;
 import com.icpizza.backend.whatsapp.service.WhatsAppService;
@@ -27,6 +24,7 @@ public class OrderPostProcessor {
     private final OrderEvents orderEvents;
     private final TikTokService tikTokService;
     private final BranchService branchService;
+    private final CustomerService customerService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -36,13 +34,22 @@ public class OrderPostProcessor {
 
         String tel = event.order.getCustomer() != null ? event.order.getCustomer().getTelephoneNo() : null;
         Branch branch = event.order.getBranch();
-        Integer estimation = branchService.getEstimationByBranch(branch);
+        int estimation = branchService.getEstimationByBranch(branch);
         String name = (event.order.getCustomer() != null ? event.order.getCustomer().getName() : null);
         if (tel != null && !tel.isBlank() && !"Unknown customer".equalsIgnoreCase(tel)) {
             String clientMsg = wa.buildOrderMessage(event.items, event.comboItems);
             wa.sendOrderConfirmation(tel, event.order,clientMsg);
             wa.sendEstimation(tel, estimation, event.order().getId());
             tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
+        }
+
+        Customer customer = event.order.getCustomer();
+        if (customer != null) {
+            try {
+                customerService.updateCustomer(event.order, customer);
+            } catch (Exception e) {
+                log.warn("Failed to update customer for order {}: {}", event.order.getId(), e.getMessage(), e);
+            }
         }
 
         wa.sendOrderToKitchenText2(event.order.getOrderNo(), kitchenMsg, tel, false, name);

@@ -34,6 +34,7 @@ public class OrderEvents {
     private static final int MAX_ATTEMPTS = 2;
 
     public void pushCreated(Order order, List<OrderItem> orderItems) {
+        log.info("[PUSH CREATED] orderId={} successfully created",  order.getId());
         MenuSnapshot snap = menuService.getMenu();
         OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
 
