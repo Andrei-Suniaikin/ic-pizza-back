@@ -1,4 +1,4 @@
-package com.icpizza.backend.management.dto;
+package com.icpizza.backend.management.dto.purchase;
 
 import java.math.BigDecimal;
 

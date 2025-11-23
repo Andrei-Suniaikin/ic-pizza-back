@@ -57,7 +57,6 @@ public class BranchService {
 
         log.info("[RECALC WORKLOAD]" + activeItems);
 
-
         WorkLoadLevel newLevel = calculateWorkloadLevel(activeItems);
 
         if(newLevel.isHigherThan(branch.getWorkLoadLevel())){

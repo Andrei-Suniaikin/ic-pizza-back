@@ -1,13 +1,13 @@
 package com.icpizza.backend.management.service;
 
-import com.icpizza.backend.management.dto.BasePurchaseResponse;
-import com.icpizza.backend.management.dto.CreatePurchaseTO;
-import com.icpizza.backend.management.dto.EditPurchaseTO;
-import com.icpizza.backend.management.dto.PurchaseTO;
+import com.icpizza.backend.management.dto.purchase.BasePurchaseResponse;
+import com.icpizza.backend.management.dto.purchase.CreatePurchaseTO;
+import com.icpizza.backend.management.dto.purchase.EditPurchaseTO;
+import com.icpizza.backend.management.dto.purchase.PurchaseTO;
 import com.icpizza.backend.management.entity.PurchaseProduct;
 import com.icpizza.backend.management.entity.Report;
+import com.icpizza.backend.management.enums.ReportType;
 import com.icpizza.backend.management.mapper.PurchaseMapper;
-import com.icpizza.backend.management.mapper.Titles;
 import com.icpizza.backend.management.repository.PurchaseProductRepository;
 import com.icpizza.backend.management.repository.ReportRepository;
 import jakarta.transaction.Transactional;
@@ -17,11 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.math.BigDecimal;
-import java.time.YearMonth;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,10 +27,9 @@ public class PurchaseService {
     private final PurchaseProductRepository purchaseProductRepository;
     private final ProductService productService;
     private final ReportRepository reportRepository;
-    private final ConsumptionService consumptionService;
 
     public List<BasePurchaseResponse> getPurchaseReports(){
-        List<Report> reports = reportRepository.findAllPurchaseReports();
+        List<Report> reports = reportRepository.findAllByType(ReportType.PURCHASE);
         return purchaseMapper.toBasePurchaseResponse(reports);
     }
 
@@ -47,7 +42,7 @@ public class PurchaseService {
         purchaseProductRepository.saveAll(purchaseProducts);
         if(!purchaseProducts.isEmpty()){
             int updatedProducts = productService.overwritePrices(purchaseProducts);
-            log.info("[CREATE PURCHASE] Updated prices for "+updatedProducts+" products");
+            log.info("[CREATE PURCHASE] Updated prices for {} products ", updatedProducts);
         }
 
         return purchaseMapper.toBasePurchaseResponse(purchaseReport);

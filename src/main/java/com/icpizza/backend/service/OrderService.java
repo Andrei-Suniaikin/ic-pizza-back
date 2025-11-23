@@ -73,6 +73,8 @@ public class OrderService {
 
             customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
 
+            orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
+
             return orderMapper.toCreateOrderTO(order, orderItems);
         }
 

@@ -1,9 +1,9 @@
 package com.icpizza.backend.management.controller;
 
-import com.icpizza.backend.management.dto.BasePurchaseResponse;
-import com.icpizza.backend.management.dto.CreatePurchaseTO;
-import com.icpizza.backend.management.dto.EditPurchaseTO;
-import com.icpizza.backend.management.dto.PurchaseTO;
+import com.icpizza.backend.management.dto.purchase.BasePurchaseResponse;
+import com.icpizza.backend.management.dto.purchase.CreatePurchaseTO;
+import com.icpizza.backend.management.dto.purchase.EditPurchaseTO;
+import com.icpizza.backend.management.dto.purchase.PurchaseTO;
 import com.icpizza.backend.management.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
