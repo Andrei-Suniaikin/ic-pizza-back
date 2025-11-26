@@ -53,9 +53,6 @@ public class OrderPostProcessor {
         }
 
         wa.sendOrderToKitchenText2(event.order.getOrderNo(), kitchenMsg, tel, false, name);
-
-        orderEvents.pushCreated(event.order, event.items);
-
     }
 
     @Async

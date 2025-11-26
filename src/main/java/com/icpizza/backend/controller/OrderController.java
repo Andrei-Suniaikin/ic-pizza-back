@@ -33,8 +33,8 @@ public class OrderController {
     }
 
     @PostMapping("/create_order")
-    public ResponseEntity<CreateOrderTO> createOrder(@RequestBody CreateOrderTO orderTO){
-        CreateOrderTO order = orderService.createWebsiteOrder(orderTO);
+    public ResponseEntity<CreateOrderResponse> createOrder(@RequestBody CreateOrderTO orderTO){
+        CreateOrderResponse order = orderService.createWebsiteOrder(orderTO);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 
