@@ -43,15 +43,6 @@ public class OrderPostProcessor {
             tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
         }
 
-        Customer customer = event.order.getCustomer();
-        if (customer != null) {
-            try {
-                customerService.updateCustomer(event.order, customer);
-            } catch (Exception e) {
-                log.warn("Failed to update customer for order {}: {}", event.order.getId(), e.getMessage(), e);
-            }
-        }
-
         wa.sendOrderToKitchenText2(event.order.getOrderNo(), kitchenMsg, tel, false, name);
     }
 
@@ -87,13 +78,12 @@ public class OrderPostProcessor {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderPickedUp(OrderPickedUpEvent orderPickedUpEvent){
         try {
-            if (orderPickedUpEvent.order.getCustomer()!= null
-                    && !orderPickedUpEvent.order.getCustomer().getTelephoneNo().isBlank()) {
-                wa.sendReadyMessage(orderPickedUpEvent.order().getCustomer().getTelephoneNo(),
-                        orderPickedUpEvent.order.getCustomer().getName(),
-                        orderPickedUpEvent.order.getCustomer().getId());
+            if (!orderPickedUpEvent.telephoneNo().isBlank()) {
+                wa.sendReadyMessage(orderPickedUpEvent.telephoneNo(),
+                        orderPickedUpEvent.name(),
+                        orderPickedUpEvent.id());
             }
-            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderPickedUpEvent.order.getId(), orderPickedUpEvent.order.getStatus()));
+            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(Long.valueOf(orderPickedUpEvent.id()), orderPickedUpEvent.status()));
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
         }
@@ -117,7 +107,10 @@ public class OrderPostProcessor {
             Order order
     ) {}
     public record OrderPickedUpEvent(
-            Order order
+            String telephoneNo,
+            String name,
+            String id,
+            String status
     ) {}
 }
 

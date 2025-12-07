@@ -153,9 +153,9 @@ ORDER BY dd.dough_type, dd.shift_date
             date_part('hour', o.created_at)::int              AS hourOfDay,
             SUM(o.amount_paid)                                AS totalSales
         FROM public.orders o
-        WHERE created_at >= now() - INTERVAL '30 days'
+        WHERE created_at BETWEEN :startDate AND :endDate
         GROUP BY dayName, hourOfDay
         ORDER BY dayName, hourOfDay
     """,  nativeQuery = true)
-    List<SalesHeatmapProjection> getRawSellsByHourStats();
+    List<SalesHeatmapProjection> getRawSellsByHourStats(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }

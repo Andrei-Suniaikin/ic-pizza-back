@@ -23,7 +23,8 @@ public record CreateOrderResponse(
         String notes,
         String address,
         Boolean isPaid,
-        Integer branchNumber
+        Integer branchNumber,
+        Boolean isNewCustomer
 ) {
     public record OrderItemsTO(
             BigDecimal amount,

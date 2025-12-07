@@ -139,9 +139,7 @@ public class OrderMapper {
         String name = (customer != null)
                 ? order.getCustomer().getName()
                 : null;
-        Long id = customer!=null
-                ? Long.valueOf(order.getCustomer().getId())
-                : null;
+        Boolean isNewCustomer = (customer != null)? customer.getAmountOfOrders()==1?Boolean.TRUE:Boolean.FALSE:Boolean.FALSE;
         log.info(name);
         return new CreateOrderResponse(
                 order.getId(),
@@ -154,7 +152,8 @@ public class OrderMapper {
                 order.getNotes(),
                 order.getAddress(),
                 order.getIsPaid(),
-                order.getBranch().getBranchNumber()
+                order.getBranch().getBranchNumber(),
+                isNewCustomer
         );
     }
 

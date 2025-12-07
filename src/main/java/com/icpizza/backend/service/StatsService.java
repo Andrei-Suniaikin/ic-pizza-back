@@ -1,12 +1,10 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.DoughUsageTO;
-import com.icpizza.backend.dto.SalesHeatmapProjection;
-import com.icpizza.backend.dto.SellsByHourStat;
-import com.icpizza.backend.dto.StatsResponse;
+import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.repository.CustomerRepository;
+import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +26,7 @@ import java.util.*;
 public class StatsService {
     private final OrderRepository orderRepo;
     private final CustomerRepository customerRepo;
+    private final OrderItemRepository orderItemRepo;
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
 
     @Transactional(readOnly = true)
@@ -98,9 +97,10 @@ public class StatsService {
                 jahezOrders,
                 jahezRevenue,
                 getDoughUsage(),
-                getSellsByHourStat(),
+                getSellsByHourStat(start, end),
                 talabatOrders,
-                talabatRevenue
+                talabatRevenue,
+                getTopFiveProducts(start, end)
         );
     }
 
@@ -141,8 +141,20 @@ public class StatsService {
         return doughUsage;
     }
 
-    private List<SellsByHourStat> getSellsByHourStat() {
-        List<SalesHeatmapProjection> rawData = orderRepo.getRawSellsByHourStats();
+    private List<TopFiveProducts> getTopFiveProducts(LocalDateTime startDate, LocalDateTime finishDate) {
+        List<TopProductsStat> topProductsStats = orderItemRepo.findTopProducts(startDate, finishDate);
+        List<TopFiveProducts> topFiveProducts = new LinkedList<>();
+
+        for (TopProductsStat topProductsStat : topProductsStats) {
+            topFiveProducts.add(new TopFiveProducts(topProductsStat.getName(), topProductsStat.getAmount()));
+        }
+
+        log.info("[STATS] GetTopFiveProducts: " + topFiveProducts.toString());
+        return topFiveProducts;
+    }
+
+    private List<SellsByHourStat> getSellsByHourStat(LocalDateTime startDate, LocalDateTime finishDate) {
+        List<SalesHeatmapProjection> rawData = orderRepo.getRawSellsByHourStats(startDate, finishDate);
 
          List<String> DAYS_OF_WEEK = List.of(
                 "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"

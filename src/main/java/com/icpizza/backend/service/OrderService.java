@@ -72,6 +72,14 @@ public class OrderService {
         orderEvents.pushCreated(order, orderItems);
         log.info("[CREATE WEBSITE ORDER] Successfully created new order, {}", order);
 
+        if (customer != null) {
+            try {
+                customerService.updateCustomer(order, customer);
+            } catch (Exception e) {
+                log.warn("Failed to update customer for order {}: {}", order.getId(), e.getMessage(), e);
+            }
+        }
+
         orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
 
         return orderMapper.toCreateOrderResponse(order, orderItems);
@@ -191,7 +199,7 @@ public class OrderService {
             order.setStatus(OrderStatus.toLabel(OrderStatus.PICKED_UP));
 
             orderRepo.save(order);
-            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order));
+            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order.getCustomer().getTelephoneNo(), order.getCustomer().getName(), order.getCustomer().getId(), "Picked Up"));
         }
 
         if (orderStatusUpdateTO.orderStatus().equals("Oven")) {

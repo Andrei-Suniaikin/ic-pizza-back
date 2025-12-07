@@ -24,7 +24,6 @@ import java.util.Map;
 public class OrderController {
     private final OrderService orderService;
     private final OrderEvents orderEvents;
-    private final OrderRepository orderRepository;
 
     @PostMapping("/status_update")
     public ResponseEntity<Void> orderStatusUpdate(@RequestBody OrderStatusUpdateTO newStatus){

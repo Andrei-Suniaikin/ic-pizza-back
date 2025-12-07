@@ -35,6 +35,7 @@ public record StatsResponse(
         List<DoughUsageTO> doughUsageTOS,
         List<SellsByHourStat> sellsByHour,
         Long totalTalabatOrders,
-        BigDecimal totalTalabatRevenue
+        BigDecimal totalTalabatRevenue,
+        List<TopFiveProducts> topProducts
 ) {
 }

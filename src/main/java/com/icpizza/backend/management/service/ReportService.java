@@ -53,7 +53,7 @@ public class ReportService {
 
             YearMonth ym = Titles.parseYearMonthPrefix(report.getTitle());
             log.info("[REPORT] trying to create consumption product");
-            consumptionService.upsertByInventoryEvent(report.getBranch().getId(), report.getUser().getId(), ym);
+            consumptionService.upsertByInventoryEvent(report.getBranch(), report.getUser().getId(), ym);
             return reportMapper.toBaseManagementResponse(report);
         }
         catch(Exception e){
@@ -79,7 +79,7 @@ public class ReportService {
 
             YearMonth ym = Titles.parseYearMonthPrefix(report.getTitle());
             log.info("[REPORT] trying to edit consumption report");
-            consumptionService.upsertByInventoryEvent(report.getBranch().getId(), report.getUser().getId(), ym);
+            consumptionService.upsertByInventoryEvent(report.getBranch(), report.getUser().getId(), ym);
 
             return reportMapper.toBaseManagementResponse(report);
 
