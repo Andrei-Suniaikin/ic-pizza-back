@@ -78,12 +78,14 @@ public class OrderPostProcessor {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOrderPickedUp(OrderPickedUpEvent orderPickedUpEvent){
         try {
-            if (!orderPickedUpEvent.telephoneNo().isBlank()) {
-                wa.sendReadyMessage(orderPickedUpEvent.telephoneNo(),
+            String tel = orderPickedUpEvent.telephoneNo();
+
+            if (tel != null && !tel.isBlank()) {
+                wa.sendReadyMessage(tel,
                         orderPickedUpEvent.name(),
                         orderPickedUpEvent.id());
             }
-            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(Long.valueOf(orderPickedUpEvent.id()), orderPickedUpEvent.status()));
+            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderPickedUpEvent.id(), orderPickedUpEvent.status()));
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
         }
@@ -109,7 +111,7 @@ public class OrderPostProcessor {
     public record OrderPickedUpEvent(
             String telephoneNo,
             String name,
-            String id,
+            Long id,
             String status
     ) {}
 }

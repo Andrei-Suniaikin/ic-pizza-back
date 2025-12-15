@@ -20,13 +20,28 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     void deleteAllByOrderId(Long orderId);
 
     @Query(value = """
-    SELECT oi.name as name, count(oi) as amount
-    FROM OrderItem oi 
-    WHERE  oi.order.createdAt BETWEEN :start AND :end
-    GROUP BY oi.name 
+    SELECT t.name as name, SUM(t.amount) as amount
+    FROM (
+        SELECT oi.name as name, COUNT(*) as amount
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.created_at BETWEEN :start AND :end
+            AND oi.category != 'Combo Deals'
+        GROUP BY oi.name
+
+        UNION ALL
+
+        SELECT ci.name as name, COUNT(*) as amount
+        FROM combo_items ci
+        JOIN order_items oi ON ci.order_item_id = oi.id
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.created_at BETWEEN :start AND :end
+        GROUP BY ci.name
+    ) as t
+    GROUP BY t.name
     ORDER BY amount DESC
-    LIMIT 5
-""")
+    LIMIT 10
+""", nativeQuery = true)
     List<TopProductsStat> findTopProducts(@Param("start") LocalDateTime start,
                                           @Param("end") LocalDateTime end);
 

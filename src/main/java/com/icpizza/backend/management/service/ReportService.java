@@ -27,8 +27,6 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final InventoryProductRepository inventoryProductRepository;
     private final ReportMapper reportMapper;
-    private final ProductRepository productRepository;
-    private final ProductMapper productMapper;
     private final ConsumptionService consumptionService;
 
     public List<BaseManagementResponse> getAllReportsByBranch(Integer branchNo) {
@@ -95,17 +93,6 @@ public class ReportService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
             return reportMapper.toOrderTO(report);
-        }
-        catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public List<ProductTO> fetchProducts() {
-        try {
-            List<Product> productEntities = productRepository.findAll();
-            List<ProductTO> products = productMapper.toProductTO(productEntities);
-            return products;
         }
         catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);

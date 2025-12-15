@@ -44,11 +44,4 @@ public class ReportController {
         ReportTO reportTO = reportService.getReport(id);
         return new ResponseEntity<>(reportTO, HttpStatus.OK);
     }
-
-    @GetMapping("/fetch_products")
-    public ResponseEntity<List<ProductTO>> fetchProducts(){
-        log.info("[REPORTS] fetching products");
-        List<ProductTO> products = reportService.fetchProducts();
-        return ResponseEntity.ok(products);
-    }
 }

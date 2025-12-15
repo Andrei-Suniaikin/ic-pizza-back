@@ -1,12 +1,16 @@
 package com.icpizza.backend.management.service;
 
+import com.icpizza.backend.management.dto.ProductTO;
 import com.icpizza.backend.management.entity.Product;
 import com.icpizza.backend.management.entity.PurchaseProduct;
+import com.icpizza.backend.management.mapper.ProductMapper;
 import com.icpizza.backend.management.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -19,6 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
+    private final ProductMapper productMapper;
 
     @Transactional
     public int overwritePrices(List<PurchaseProduct> purchaseProducts) {
@@ -53,5 +58,16 @@ public class ProductService {
         productRepository.saveAll(productsToUpdate);
         log.info("[PRODUCT SERVICE] Prices for products have been overwritten");
         return productsToUpdate.size();
+    }
+
+    public List<ProductTO> fetchProducts() {
+        try {
+            List<Product> productEntities = productRepository.findAll();
+            List<ProductTO> products = productMapper.toProductTO(productEntities);
+            return products;
+        }
+        catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
