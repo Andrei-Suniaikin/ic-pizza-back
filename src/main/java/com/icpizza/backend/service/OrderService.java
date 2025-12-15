@@ -47,36 +47,16 @@ public class OrderService {
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Transactional
-    public CreateOrderTO createWebsiteOrder(CreateOrderTO orderTO) {
-        boolean hasTelephone = orderTO.telephoneNo()==null? false: true;
-        log.info(String.valueOf(orderTO));
-
-        if (hasTelephone){
-            Optional<Customer> customerOptional = customerRepo.findByTelephoneNo(orderTO.telephoneNo());
-            Customer customer = customerOptional.orElseGet(() -> customerService.createCustomer(orderTO));
-
-
-            Order order = orderMapper.toOrderEntity(orderTO, customer);
-            branchService.recalcBranchWorkload(order.getBranch());
-            order.setEstimation(branchService.getEstimationByBranch(order.getBranch()));
-            orderRepo.saveAndFlush(order);
-            log.info(String.valueOf(order));
-
-            List<OrderItem> orderItems = orderMapper.toOrderItems(orderTO, order);
-            orderItemRepo.saveAllAndFlush(orderItems);
-
-
-            log.info("[ORDER ITEMS]"+ orderItems+".");
-            List<ComboItem> comboItems = orderMapper.toComboItems(orderTO, orderItems);
-            if(comboItems!=null) comboItemRepo.saveAllAndFlush(comboItems);
-
-
-            customerOptional.ifPresent(c -> customerService.updateCustomer(order, customer));
-
-            return orderMapper.toCreateOrderTO(order, orderItems);
-        }
+    public CreateOrderResponse createWebsiteOrder(CreateOrderTO orderTO) {
+        boolean hasTelephone = orderTO.telephoneNo() == null ? false : true;
+        log.info("[CREATE WEBSITE ORDER] Creating new order from website");
 
         Customer customer = null;
+
+        if (hasTelephone) {
+            Optional<Customer> customerOptional = customerRepo.findByTelephoneNo(orderTO.telephoneNo());
+            customer = customerOptional.orElseGet(() -> customerService.createCustomer(orderTO));
+        }
 
         Order order = orderMapper.toOrderEntity(orderTO, customer);
         branchService.recalcBranchWorkload(order.getBranch());
@@ -87,16 +67,28 @@ public class OrderService {
         orderItemRepo.saveAllAndFlush(orderItems);
 
         List<ComboItem> comboItems = orderMapper.toComboItems(orderTO, orderItems);
-        if(comboItems!=null) comboItemRepo.saveAllAndFlush(comboItems);
+        if (comboItems != null) comboItemRepo.saveAllAndFlush(comboItems);
+
+        orderEvents.pushCreated(order, orderItems);
+        log.info("[CREATE WEBSITE ORDER] Successfully created new order, {}", order);
+
+        if (customer != null) {
+            try {
+                customerService.updateCustomer(order, customer);
+            } catch (Exception e) {
+                log.warn("Failed to update customer for order {}: {}", order.getId(), e.getMessage(), e);
+            }
+        }
 
         orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
 
-        return orderMapper.toCreateOrderTO(order, orderItems);
+        return orderMapper.toCreateOrderResponse(order, orderItems);
     }
 
     @Async
     @Transactional
     public void createJahezOrder(JahezDTOs.JahezOrderCreatePayload jahezOrder){
+        log.info("[CREATE JAHEZE ORDER] Creating jahez order");
         if (orderRepo.findByExternalId(jahezOrder.jahez_id()).isPresent()) {
             log.info("[JAHEZ] duplicate create jahez_id={}, skip", jahezOrder.jahez_id());
             return;
@@ -207,7 +199,7 @@ public class OrderService {
             order.setStatus(OrderStatus.toLabel(OrderStatus.PICKED_UP));
 
             orderRepo.save(order);
-            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order));
+            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order.getCustomer().getTelephoneNo(), order.getCustomer().getName(), order.getCustomer().getId(), "Picked Up"));
         }
 
         if (orderStatusUpdateTO.orderStatus().equals("Oven")) {
@@ -224,6 +216,7 @@ public class OrderService {
 
     @Transactional
     public EditOrderResponse editOrder(EditOrderTO editOrderTO) {
+        log.info("[ORDER EDIT] Editing order with id {}.", editOrderTO.orderId());
         Order orderToEdit = orderRepo.findById(editOrderTO.orderId())
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Order %d not found".formatted(editOrderTO.orderId())));
 

@@ -32,6 +32,10 @@ public record StatsResponse(
         Long totalJahezOrderCount,
         @JsonProperty("jahez_total_revenue")
         BigDecimal totalJahezRevenue,
-        List<DoughUsageTO> doughUsageTOS
+        List<DoughUsageTO> doughUsageTOS,
+        List<SellsByHourStat> sellsByHour,
+        Long totalTalabatOrders,
+        BigDecimal totalTalabatRevenue,
+        List<TopFiveProducts> topProducts
 ) {
 }

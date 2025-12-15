@@ -1,10 +1,10 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.DoughUsageTO;
-import com.icpizza.backend.dto.StatsResponse;
+import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.repository.CustomerRepository;
+import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,7 @@ import java.util.*;
 public class StatsService {
     private final OrderRepository orderRepo;
     private final CustomerRepository customerRepo;
+    private final OrderItemRepository orderItemRepo;
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
 
     @Transactional(readOnly = true)
@@ -42,7 +43,9 @@ public class StatsService {
         long oldUniq      = Math.max(0, uniqInWindow - newUniq);
 
         long jahezOrders   = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "Jahez");
+        long talabatOrders = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "talabat");
         BigDecimal jahezRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "Jahez"));
+        BigDecimal talabatRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "talabat"));
 
         BigDecimal sumPaid = nvl(orderRepo.sumAllAmountPaidAllTime());
         long uniqueCustomers = customerRepo.countDistinctTelephoneNo();
@@ -93,7 +96,11 @@ public class StatsService {
                 retentionPct,
                 jahezOrders,
                 jahezRevenue,
-                getDoughUsage()
+                getDoughUsage(),
+                getSellsByHourStat(start, end),
+                talabatOrders,
+                talabatRevenue,
+                getTopFiveProducts(start, end)
         );
     }
 
@@ -132,6 +139,58 @@ public class StatsService {
         log.info("[STATS] getDoughUsage: " + doughUsage.toString());
 
         return doughUsage;
+    }
+
+    private List<TopFiveProducts> getTopFiveProducts(LocalDateTime startDate, LocalDateTime finishDate) {
+        List<TopProductsStat> topProductsStats = orderItemRepo.findTopProducts(startDate, finishDate);
+        List<TopFiveProducts> topFiveProducts = new LinkedList<>();
+
+        for (TopProductsStat topProductsStat : topProductsStats) {
+            topFiveProducts.add(new TopFiveProducts(topProductsStat.getName(), topProductsStat.getAmount()));
+        }
+
+        log.info("[STATS] GetTopFiveProducts: " + topFiveProducts.toString());
+        return topFiveProducts;
+    }
+
+    private List<SellsByHourStat> getSellsByHourStat(LocalDateTime startDate, LocalDateTime finishDate) {
+        List<SalesHeatmapProjection> rawData = orderRepo.getRawSellsByHourStats(startDate, finishDate);
+
+         List<String> DAYS_OF_WEEK = List.of(
+                "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+        );
+
+         List<Integer> HEATMAP_ROWS = List.of(
+                14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1
+        );
+
+        Map<Integer, Map<String, BigDecimal>> aggregatedRows = new LinkedHashMap<>();
+
+        for(SalesHeatmapProjection rawDataRow : rawData) {
+            Integer hour = rawDataRow.getHourOfDay();
+            String day = rawDataRow.getDayName().trim();
+            BigDecimal amount = rawDataRow.getTotalSales();
+
+            Map<String, BigDecimal> dailySalesMap = aggregatedRows.computeIfAbsent(hour, k -> new HashMap<>());
+
+            dailySalesMap.put(day, amount);
+        }
+
+        List<SellsByHourStat> finalNestedList = new ArrayList<>();
+
+        for(Integer hour : HEATMAP_ROWS) {
+            Map<String, BigDecimal> currentHourSales = aggregatedRows.getOrDefault(hour, Collections.emptyMap());
+            Map<String, BigDecimal> sellsByDayMap = new LinkedHashMap<>();
+
+            for(String day : DAYS_OF_WEEK) {
+                BigDecimal amount = currentHourSales.getOrDefault(day, BigDecimal.ZERO);
+                sellsByDayMap.put(day, amount);
+            }
+
+            finalNestedList.add(new SellsByHourStat(hour, sellsByDayMap));
+        }
+        log.info("[STATS] getSellsByHourStat: " + finalNestedList.toString());
+        return finalNestedList;
     }
 
     private LocalDate convertToLocalDate(Object d) {

@@ -11,8 +11,6 @@ import java.util.List;
 
 
 public record CreateOrderTO (
-        @JsonProperty("id")
-        Long id,
         @JsonProperty("tel")
         String telephoneNo,
         @JsonProperty("customer_name")

@@ -24,7 +24,6 @@ import java.util.Map;
 public class OrderController {
     private final OrderService orderService;
     private final OrderEvents orderEvents;
-    private final OrderRepository orderRepository;
 
     @PostMapping("/status_update")
     public ResponseEntity<Void> orderStatusUpdate(@RequestBody OrderStatusUpdateTO newStatus){
@@ -33,8 +32,8 @@ public class OrderController {
     }
 
     @PostMapping("/create_order")
-    public ResponseEntity<CreateOrderTO> createOrder(@RequestBody CreateOrderTO orderTO){
-        CreateOrderTO order = orderService.createWebsiteOrder(orderTO);
+    public ResponseEntity<CreateOrderResponse> createOrder(@RequestBody CreateOrderTO orderTO){
+        CreateOrderResponse order = orderService.createWebsiteOrder(orderTO);
         return new ResponseEntity<>(order, HttpStatus.CREATED);
     }
 

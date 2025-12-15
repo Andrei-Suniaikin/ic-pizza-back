@@ -266,6 +266,7 @@ public class WhatsAppService {
     }
 
     public void sendOrderToKitchenText2(Integer orderNo, String messageBody, String telephoneNo, boolean isEdit, String name) {
+        log.info("[SENDING ORDER TO KITCHEN] Sending message to kitchen");
         String headerText = (isEdit ? "✏️ Order " + orderNo + " updated!" : "✅ New order: " + orderNo + "!")
                 .replaceAll("[\\r\\n\\t]+", " ")
                 .replaceAll(" {5,}", "    ")
@@ -294,10 +295,7 @@ public class WhatsAppService {
             clientInfo = "Unknown customer";
         }
 
-//        String clientInfo = (org.springframework.util.StringUtils.hasText(name) ? (telephoneNo + " (" + name + ")") : telephoneNo)
-//                .replaceAll("[\\r\\n\\t]+", " ")
-//                .replaceAll(" {5,}", "    ")
-//                .trim();
+        log.info("[ORDER NO] "+orderNo+", clientInfo: "+clientInfo);
 
         String orderInline = (messageBody == null ? "" : messageBody)
                 .replace("\t", " ")

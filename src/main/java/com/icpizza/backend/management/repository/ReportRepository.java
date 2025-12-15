@@ -19,9 +19,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Report> findAllByBranchDesc(@Param("branchNo") Integer branchNo);
 
     @Query("""
-    SELECT r FROM Report r WHERE  r.type="PURCHASE" ORDER BY r.createdAt DESC
+    SELECT r FROM Report r WHERE r.type=:type ORDER BY r.createdAt DESC
 """)
-    List<Report> findAllPurchaseReports();
+    List<Report> findAllByType(@Param("type") ReportType type);
 
     @Query("""
     SELECT r FROM Report r
@@ -43,11 +43,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
         if (list.isEmpty()) return Optional.empty();
         return Optional.of(list.get(0));
     }
-
-    @Query("""
-    SELECT r FROM Report r WHERE r.type="PRODUCT_CONSUMPTION" ORDER BY r.createdAt DESC
-    """)
-    List<Report> findAllConsumptionReports();
 
     Optional<Report> findTopByTypeOrderByCreatedAtDesc(ReportType type);
 

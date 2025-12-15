@@ -1,10 +1,7 @@
 package com.icpizza.backend.mapper;
 
 import com.icpizza.backend.cache.MenuSnapshot;
-import com.icpizza.backend.dto.CreateOrderTO;
-import com.icpizza.backend.dto.EditOrderTO;
-import com.icpizza.backend.dto.OrderHistoryTO;
-import com.icpizza.backend.dto.OrderInfoTO;
+import com.icpizza.backend.dto.*;
 import com.icpizza.backend.entity.*;
 import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.repository.BranchRepository;
@@ -134,7 +131,7 @@ public class OrderMapper {
         }).toList();
     }
 
-    public CreateOrderTO toCreateOrderTO(Order order, List<OrderItem> items) {
+    public CreateOrderResponse toCreateOrderResponse(Order order, List<OrderItem> items) {
         Customer customer = order.getCustomer();
         String telephoneNo = (customer != null)
                 ? order.getCustomer().getTelephoneNo()
@@ -142,15 +139,12 @@ public class OrderMapper {
         String name = (customer != null)
                 ? order.getCustomer().getName()
                 : null;
-        Long id = customer!=null
-                ? Long.valueOf(order.getCustomer().getId())
-                : null;
+        Boolean isNewCustomer = (customer != null)? customer.getAmountOfOrders()==1?Boolean.TRUE:Boolean.FALSE:Boolean.FALSE;
         log.info(name);
-        return new CreateOrderTO(
+        return new CreateOrderResponse(
                 order.getId(),
                 telephoneNo,
                 name,
-//                id,
                 order.getAmountPaid(),
                 toOrderItemsTO(items),
                 order.getPaymentType(),
@@ -158,7 +152,8 @@ public class OrderMapper {
                 order.getNotes(),
                 order.getAddress(),
                 order.getIsPaid(),
-                order.getBranch().getBranchNumber()
+                order.getBranch().getBranchNumber(),
+                isNewCustomer
         );
     }
 

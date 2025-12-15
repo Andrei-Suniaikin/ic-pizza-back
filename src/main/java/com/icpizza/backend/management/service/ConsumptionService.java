@@ -41,17 +41,18 @@ public class ConsumptionService {
     private static final ZoneId TZ = ZoneId.of("Asia/Bahrain");
     private final ReportMapper reportMapper;
 
-    public void upsertByInventoryEvent(UUID branchId, Long userId, YearMonth ym){
+    public void upsertByInventoryEvent(Branch branch, Long userId, YearMonth ym){
         log.info("[CONSUMPTION REPORT] Started to create consumption report: " + ym);
         final String curPrefix  = Titles.monthPrefix(ym);
         final String prevPrefix = Titles.monthPrefix(ym.minusMonths(1));
 
-        final String consumptionTitle = curPrefix + "-consumption-";
+        final String consumptionTitle = curPrefix + "-consumption-" + branch.getBranchName().toLowerCase();
 
-        Report report = reportRepository.findByBranchTypeTitle(branchId, ReportType.PRODUCT_CONSUMPTION, consumptionTitle)
+
+        Report report = reportRepository.findByBranchTypeTitle(branch.getId(), ReportType.PRODUCT_CONSUMPTION, consumptionTitle)
                 .orElseGet(() -> {
                     Report r = new Report();
-                    r.setBranch(em.getReference(Branch.class, branchId));
+                    r.setBranch(branch);
                     r.setUser(em.getReference(User.class, userId));
                     r.setType(ReportType.PRODUCT_CONSUMPTION);
                     r.setTitle(consumptionTitle);
@@ -63,10 +64,10 @@ public class ConsumptionService {
         consumptionItemRepository.deleteByReportId(report.getId());
 
         Set<Long> purchIds = productRepository.findIdsByPurchasableTrue();
-        Map<Long, ProductInfo> previousInventory  = productsFromPreviousInventory(branchId, prevPrefix, purchIds);
+        Map<Long, ProductInfo> previousInventory  = productsFromPreviousInventory(branch.getId(), prevPrefix, purchIds);
         log.info(previousInventory.toString());
-        Map<Long, ProductInfo> currentInventory = productsFromCurrentInventory(branchId, curPrefix,  purchIds);
-        Map<Long, ProductInfo> purchases  = purchases(branchId, curPrefix, purchIds);
+        Map<Long, ProductInfo> currentInventory = productsFromCurrentInventory(branch.getId(), curPrefix,  purchIds);
+        Map<Long, ProductInfo> purchases  = purchases(branch.getId(), curPrefix, purchIds);
         log.info(purchases.toString());
 
         Set<Long> keys = new HashSet<>();

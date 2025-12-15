@@ -1,5 +1,6 @@
 package com.icpizza.backend.service;
 
+import com.icpizza.backend.dto.CheckCustomerResponse;
 import com.icpizza.backend.dto.CreateOrderTO;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
@@ -14,7 +15,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -24,11 +24,20 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private static final ZoneId BAHRAIN = ZoneId.of("Asia/Bahrain");
 
-    Random random = new Random();
-
-
+    @Transactional
     public Optional<Customer> findCustomer(String telephoneNo){
         return customerRepository.findByTelephoneNo(telephoneNo);
+    }
+
+    @Transactional
+    public CheckCustomerResponse checkCustomer(String telephoneNo) {
+        Optional<Customer> customer = customerRepository.findByTelephoneNo(telephoneNo);
+        Boolean isNewCustomer = customer.isPresent() ?
+                ((customer.get().getAmountOfOrders() > 0) ?
+                        Boolean.FALSE :
+                        Boolean.TRUE) :
+                Boolean.TRUE;
+        return new CheckCustomerResponse(isNewCustomer);
     }
 
     @Transactional
@@ -36,7 +45,7 @@ public class CustomerService {
         Customer customer = new Customer();
         customer.setName(order.customerName());
         customer.setTelephoneNo(order.telephoneNo());
-        customer.setAmountOfOrders(1);
+        customer.setAmountOfOrders(0);
         customer.setAmountPaid(order.amountPaid());
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         customer.setLastOrder(LocalDateTime.now(BAHRAIN).format(fmt));

@@ -1,4 +1,6 @@
-package com.icpizza.backend.management.dto;
+package com.icpizza.backend.management.dto.purchase;
+
+import com.icpizza.backend.management.dto.ProductTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
