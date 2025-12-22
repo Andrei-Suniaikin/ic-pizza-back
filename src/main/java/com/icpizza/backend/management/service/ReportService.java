@@ -4,6 +4,7 @@ import com.icpizza.backend.management.dto.*;
 import com.icpizza.backend.management.entity.InventoryProduct;
 import com.icpizza.backend.management.entity.Product;
 import com.icpizza.backend.management.entity.Report;
+import com.icpizza.backend.management.enums.ReportType;
 import com.icpizza.backend.management.mapper.ProductMapper;
 import com.icpizza.backend.management.mapper.ReportMapper;
 import com.icpizza.backend.management.mapper.Titles;
@@ -27,8 +28,6 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final InventoryProductRepository inventoryProductRepository;
     private final ReportMapper reportMapper;
-    private final ProductRepository productRepository;
-    private final ProductMapper productMapper;
     private final ConsumptionService consumptionService;
 
     public List<BaseManagementResponse> getAllReportsByBranch(Integer branchNo) {
@@ -89,23 +88,23 @@ public class ReportService {
         }
     }
 
+    public Boolean checkIfExistsConsumptionForCurrentMonth(String title){
+        log.info("Checking if exists consumption for current month: " + title);
+        Report report = reportRepository.findTopByTypeOrderByCreatedAtDesc(ReportType.INVENTORY).orElseGet(()-> null);
+        if (report == null){
+            return false;
+        }
+        String inventoryTitlePrefix = report.getTitle().substring(0, 6);
+        String purchasePrefix = title.substring(0, 6);
+        return inventoryTitlePrefix.equals(purchasePrefix);
+    }
+
     public ReportTO getReport(Long id) {
         try {
             Report report = reportRepository.findById(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
             return reportMapper.toOrderTO(report);
-        }
-        catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public List<ProductTO> fetchProducts() {
-        try {
-            List<Product> productEntities = productRepository.findAll();
-            List<ProductTO> products = productMapper.toProductTO(productEntities);
-            return products;
         }
         catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);

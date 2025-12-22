@@ -199,8 +199,12 @@ public class OrderService {
             order.setStatus(OrderStatus.toLabel(OrderStatus.PICKED_UP));
 
             orderRepo.save(order);
-            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(order.getCustomer().getTelephoneNo(), order.getCustomer().getName(), order.getCustomer().getId(), "Picked Up"));
-        }
+            orderPostProcessor.onOrderPickedUp(new OrderPostProcessor.OrderPickedUpEvent(
+                    (order.getCustomer() != null) ? order.getCustomer().getTelephoneNo() : null,
+                    (order.getCustomer() != null) ? order.getCustomer().getName() : null,
+                     order.getId(),
+                    "Picked Up"
+            ));        }
 
         if (orderStatusUpdateTO.orderStatus().equals("Oven")) {
             Order order = orderRepo.findById(orderStatusUpdateTO.orderId())

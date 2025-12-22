@@ -8,6 +8,7 @@ import com.icpizza.backend.management.entity.PurchaseProduct;
 import com.icpizza.backend.management.entity.Report;
 import com.icpizza.backend.management.enums.ReportType;
 import com.icpizza.backend.management.mapper.PurchaseMapper;
+import com.icpizza.backend.management.mapper.Titles;
 import com.icpizza.backend.management.repository.PurchaseProductRepository;
 import com.icpizza.backend.management.repository.ReportRepository;
 import jakarta.transaction.Transactional;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -27,6 +29,8 @@ public class PurchaseService {
     private final PurchaseProductRepository purchaseProductRepository;
     private final ProductService productService;
     private final ReportRepository reportRepository;
+    private final ConsumptionService consumptionService;
+    private final ReportService reportService;
 
     public List<BasePurchaseResponse> getPurchaseReports(){
         List<Report> reports = reportRepository.findAllByType(ReportType.PURCHASE);
@@ -45,6 +49,11 @@ public class PurchaseService {
             log.info("[CREATE PURCHASE] Updated prices for {} products ", updatedProducts);
         }
 
+        if(reportService.checkIfExistsConsumptionForCurrentMonth(purchaseReport.getTitle())){
+            YearMonth ym = Titles.parseYearMonthPrefix(purchaseReport.getTitle());
+            consumptionService.upsertByInventoryEvent(purchaseReport.getBranch(), purchaseReport.getUser().getId(), ym);
+        }
+
         return purchaseMapper.toBasePurchaseResponse(purchaseReport);
     }
 
@@ -60,6 +69,7 @@ public class PurchaseService {
         }
     }
 
+    @Transactional
     public BasePurchaseResponse editPurchaseReport(EditPurchaseTO editpurchaseTO) {
         log.info("[EDIT PURCHASE REPORT] Editing purchase report with id: "+editpurchaseTO.id()+"");
         Report purchaseReportToEdit = reportRepository.findById(editpurchaseTO.id()).orElseThrow(() -> new HttpClientErrorException(HttpStatus.NOT_FOUND));
@@ -75,8 +85,16 @@ public class PurchaseService {
                 log.info("[CREATE PURCHASE] Updated prices for " + updatedProducts + " products");
             }
 
+            if(reportService.checkIfExistsConsumptionForCurrentMonth(purchaseReportToEdit.getTitle())){
+                YearMonth ym = Titles.parseYearMonthPrefix(purchaseReportToEdit.getTitle());
+                log.info("Editing consumption report");
+                consumptionService.upsertByInventoryEvent(purchaseReportToEdit.getBranch(), purchaseReportToEdit.getUser().getId(), ym);
+            }
+
             return purchaseMapper.toBasePurchaseResponse(purchaseReportToEdit);
         }
-        catch (Exception e){ throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR); }
+        catch (Exception e){
+            log.error(e.getMessage());
+            throw new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR); }
     }
 }
