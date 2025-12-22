@@ -4,6 +4,7 @@ import com.icpizza.backend.management.dto.*;
 import com.icpizza.backend.management.entity.InventoryProduct;
 import com.icpizza.backend.management.entity.Product;
 import com.icpizza.backend.management.entity.Report;
+import com.icpizza.backend.management.enums.ReportType;
 import com.icpizza.backend.management.mapper.ProductMapper;
 import com.icpizza.backend.management.mapper.ReportMapper;
 import com.icpizza.backend.management.mapper.Titles;
@@ -85,6 +86,17 @@ public class ReportService {
         catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public Boolean checkIfExistsConsumptionForCurrentMonth(String title){
+        log.info("Checking if exists consumption for current month: " + title);
+        Report report = reportRepository.findTopByTypeOrderByCreatedAtDesc(ReportType.INVENTORY).orElseGet(()-> null);
+        if (report == null){
+            return false;
+        }
+        String inventoryTitlePrefix = report.getTitle().substring(0, 6);
+        String purchasePrefix = title.substring(0, 6);
+        return inventoryTitlePrefix.equals(purchasePrefix);
     }
 
     public ReportTO getReport(Long id) {

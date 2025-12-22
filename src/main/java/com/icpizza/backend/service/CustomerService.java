@@ -67,6 +67,7 @@ public class CustomerService {
         log.info("Updated values : " + customer.getAmountOfOrders() + customer.getAmountPaid());
     }
 
+    @Transactional
     public Customer createWatsappCustomer(String senderPhone) {
         Customer customer = new Customer();
         customer.setTelephoneNo(senderPhone);

@@ -25,28 +25,6 @@ public class BranchEvents {
     private final Map<BaseAdminResponse, ScheduledFuture<?>> pendingWorkloadUpdate = new ConcurrentHashMap<>();
     private static final int MAX_ATTEMPTS = 2;
 
-//    public void pushWorkloadLevelChange(UpdateWorkLoadLevelTO updateWorkLoadLevelTO){
-//        int branchNumber = updateWorkLoadLevelTO.branchNumber();
-//        String dest = "/topic/workload-level-change";
-//        ws.convertAndSend(dest, updateWorkLoadLevelTO);
-//
-//        attempts.putIfAbsent(Long.valueOf(branchNumber), 0);
-//        ScheduledFuture<?> future = scheduler.schedule(() -> {
-//            int prev = attempts.getOrDefault(Long.valueOf(branchNumber), 0);
-//            if (prev >= MAX_ATTEMPTS) {
-//                pendingWorkloadUpdate.remove(Long.valueOf(branchNumber));
-//                attempts.remove(Long.valueOf(branchNumber));
-//                return;
-//            }
-//            attempts.put(Long.valueOf(branchNumber), prev + 1);
-//            ws.convertAndSend(dest, updateWorkLoadLevelTO);
-//            ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
-//            pendingWorkloadUpdate.put(updateWorkLoadLevelTO, again);
-//        }, new java.util.Date(System.currentTimeMillis() + 3000));
-//
-//        pendingWorkloadUpdate.put(updateWorkLoadLevelTO, future);
-//    }
-
     public void onAdminBaseInfoChange(BaseAdminResponse baseAdminResponse) {
         String dest = "/topic/admin-base-info";
         ws.convertAndSend(dest, baseAdminResponse);

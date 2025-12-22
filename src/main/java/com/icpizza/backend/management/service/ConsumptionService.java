@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -41,9 +42,10 @@ public class ConsumptionService {
     private static final ZoneId TZ = ZoneId.of("Asia/Bahrain");
     private final ReportMapper reportMapper;
 
-    public void upsertByInventoryEvent(Branch branch, Long userId, YearMonth ym){
+    @Transactional
+    public void upsertByInventoryEvent(Branch branch, Long userId, YearMonth ym) {
         log.info("[CONSUMPTION REPORT] Started to create consumption report: " + ym);
-        final String curPrefix  = Titles.monthPrefix(ym);
+        final String curPrefix = Titles.monthPrefix(ym);
         final String prevPrefix = Titles.monthPrefix(ym.minusMonths(1));
 
         final String consumptionTitle = curPrefix + "-consumption-" + branch.getBranchName().toLowerCase();
@@ -64,33 +66,30 @@ public class ConsumptionService {
         consumptionItemRepository.deleteByReportId(report.getId());
 
         Set<Long> purchIds = productRepository.findIdsByPurchasableTrue();
-        Map<Long, ProductInfo> previousInventory  = productsFromPreviousInventory(branch.getId(), prevPrefix, purchIds);
+        Map<Long, ProductInfo> previousInventory = productsFromPreviousInventory(branch.getId(), prevPrefix, purchIds);
         log.info(previousInventory.toString());
-        Map<Long, ProductInfo> currentInventory = productsFromCurrentInventory(branch.getId(), curPrefix,  purchIds);
-        Map<Long, ProductInfo> purchases  = purchases(branch.getId(), curPrefix, purchIds);
+        Map<Long, ProductInfo> currentInventory = productsFromCurrentInventory(branch.getId(), curPrefix, purchIds);
+        Map<Long, ProductInfo> purchases = purchases(branch.getId(), curPrefix, purchIds);
         log.info(purchases.toString());
 
         Set<Long> keys = new HashSet<>();
-        keys.addAll(previousInventory.keySet()); keys.addAll(currentInventory.keySet()); keys.addAll(purchases.keySet());
+        keys.addAll(previousInventory.keySet());
+        keys.addAll(currentInventory.keySet());
+        keys.addAll(purchases.keySet());
 
         Map<Long, Product> products = productRepository.findAllByIdIn(keys).stream()
-                .collect(Collectors.toMap(Product::getId, p->p));
+                .collect(Collectors.toMap(Product::getId, p -> p));
 
         BigDecimal total = BigDecimal.ZERO;
         List<ProductConsumptionItem> items = new ArrayList<>(keys.size());
 
         for (Long pid : keys) {
-            var o = previousInventory.getOrDefault(pid,  new ProductInfo(pid, BigDecimal.ZERO, BigDecimal.ZERO));
-            log.info("[CONSUMPTION REPORT] found previous inventory: " + o.toString());
+            var o = previousInventory.getOrDefault(pid, new ProductInfo(pid, BigDecimal.ZERO, BigDecimal.ZERO));
             var b = purchases.getOrDefault(pid, new ProductInfo(pid, BigDecimal.ZERO, BigDecimal.ZERO));
-            log.info("[CONSUMPTION REPORT] found previous purchase: " + b.toString());
             var c = currentInventory.getOrDefault(pid, new ProductInfo(pid, BigDecimal.ZERO, BigDecimal.ZERO));
-            log.info("[CONSUMPTION REPORT] found current inventory: " + c.toString());
 
             BigDecimal totalQuantityForMonth = o.quantity().add(b.quantity()).subtract(c.quantity());
-            log.info("Summed total quantity for month: " + totalQuantityForMonth.toString());
             BigDecimal totalFinalPrice = o.finalPrice().add(b.finalPrice()).subtract(c.finalPrice());
-            log.info("Summed total price for month: " + totalFinalPrice.toString());
 
             if (totalQuantityForMonth.signum() < 0) totalQuantityForMonth = BigDecimal.ZERO;
             if (totalFinalPrice.signum() < 0) totalFinalPrice = BigDecimal.ZERO;
@@ -107,40 +106,38 @@ public class ConsumptionService {
     }
 
 
+    private Map<Long, ProductInfo> productsFromPreviousInventory(UUID branchId, String prevPrefix, Set<Long> ids) {
+        Report prevInventory = pickLatest(branchId, ReportType.INVENTORY, prevPrefix);
+        if (prevInventory == null) return Map.of();
+        return inventoryProductRepository.loadByReport(prevInventory.getId(), ids).stream()
+                .collect(Collectors.toMap(ProductInfo::id, x -> x));
+    }
 
+    private Map<Long, ProductInfo> productsFromCurrentInventory(UUID branchId, String curPrefix, Set<Long> ids) {
+        Report curInventory = pickLatest(branchId, ReportType.INVENTORY, curPrefix);
+        if (curInventory == null) return Map.of();
+        return inventoryProductRepository.loadByReport(curInventory.getId(), ids).stream()
+                .collect(Collectors.toMap(ProductInfo::id, x -> x));
+    }
 
-private Map<Long, ProductInfo> productsFromPreviousInventory(UUID branchId, String prevPrefix, Set<Long> ids){
-    Report prevInventory = pickLatest(branchId, ReportType.INVENTORY, prevPrefix);
-    if (prevInventory==null) return Map.of();
-    return inventoryProductRepository.loadByReport(prevInventory.getId(), ids).stream()
-            .collect(Collectors.toMap(ProductInfo::id, x->x));
-}
+    private Map<Long, ProductInfo> purchases(UUID branchId, String curPrefix, Set<Long> ids) {
+        var opt = reportRepository.findSinglePurchaseByPrefix(branchId, curPrefix);
+        if (opt.isEmpty()) return Map.of();
+        Long purchaseReportId = opt.get().getId();
+        return purchaseProductRepository.aggregateForReport(purchaseReportId, ids).stream()
+                .collect(Collectors.toMap(ProductInfo::id, x -> x));
+    }
 
-private Map<Long, ProductInfo>  productsFromCurrentInventory(UUID branchId, String curPrefix, Set<Long> ids){
-    Report curInventory = pickLatest(branchId, ReportType.INVENTORY, curPrefix);
-    if (curInventory==null) return Map.of();
-    return inventoryProductRepository.loadByReport(curInventory.getId(), ids).stream()
-            .collect(Collectors.toMap(ProductInfo::id, x->x));
-}
-
-private Map<Long, ProductInfo> purchases(UUID branchId, String curPrefix, Set<Long> ids){
-    var opt = reportRepository.findSinglePurchaseByPrefix(branchId, curPrefix);
-    if (opt.isEmpty()) return Map.of();
-    Long purchaseReportId = opt.get().getId();
-    return purchaseProductRepository.aggregateForReport(purchaseReportId, ids).stream()
-            .collect(Collectors.toMap(ProductInfo::id, x->x));
-}
-
-private Report pickLatest(UUID branchId, ReportType type, String prefix){
-    List<Report> list = reportRepository.findByPrefix(branchId, type, prefix);
-    return list.isEmpty()? null : list.get(0);
-}
+    private Report pickLatest(UUID branchId, ReportType type, String prefix) {
+        List<Report> list = reportRepository.findByPrefix(branchId, type, prefix);
+        return list.isEmpty() ? null : list.get(0);
+    }
 
     public ConsumptionReportTO getLatestReport() {
         Report report = reportRepository.findTopByTypeOrderByCreatedAtDesc(ReportType.PRODUCT_CONSUMPTION)
-                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        List<ProductConsumptionItem> products =  consumptionItemItemRepository.findAllByReport(report);
+        List<ProductConsumptionItem> products = consumptionItemItemRepository.findAllByReport(report);
 
         return reportMapper.toConsumptionReportTO(report, products);
     }
