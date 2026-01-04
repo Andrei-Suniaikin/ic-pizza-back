@@ -25,10 +25,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("""
   SELECT o FROM Order o
-  WHERE o.status != "Picked Up"
+  WHERE o.status != "Picked Up" 
+    AND o.branch.id=:branchId
   ORDER BY o.createdAt DESC
 """)
-    List<Order> findActiveOrders();
+    List<Order> findActiveOrders(@Param("branchId") UUID branchId);
 
     @Query("""
        select o
@@ -36,9 +37,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
        left join fetch o.customer
        where o.status = "Picked Up"
          and o.createdAt >= :cutoff
+         and o.branch.id=:branchId
        order by o.createdAt desc
        """)
-    List<Order> findReadySince(@Param("cutoff") LocalDateTime cutoff);
+    List<Order> findReadySince(@Param("branchId")UUID branchId,@Param("cutoff") LocalDateTime cutoff);
 
     @Query(value = """
         SELECT COUNT(*) FROM (

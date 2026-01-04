@@ -44,7 +44,7 @@ public class WhatsAppWebhookController {
 
                 Optional<Customer> customer = customerService.findCustomer(senderPhone);
                 if (customer.isEmpty()) {
-                    Customer newCustomer = customerService.createWatsappCustomer(senderPhone);
+                    customerService.createWatsappCustomer(senderPhone);
                     wa.askForName(senderPhone);
                     return ResponseEntity.ok(Map.of("status", "asked for name"));
                 }

@@ -2,6 +2,8 @@ package com.icpizza.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.UUID;
+
 public record OrderStatusUpdateTO(
         @JsonProperty("orderId")
         Long orderId,
@@ -9,6 +11,7 @@ public record OrderStatusUpdateTO(
         Long jahezOrderId,
         @JsonProperty("orderStatus")
         String orderStatus,
-        String reason
+        String reason,
+        UUID branchId
 ) {
 }

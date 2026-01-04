@@ -1,8 +1,6 @@
 package com.icpizza.backend.controller;
 
 import com.icpizza.backend.dto.*;
-import com.icpizza.backend.entity.Order;
-import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.service.OrderService;
 import com.icpizza.backend.websocket.OrderEvents;
 import com.icpizza.backend.websocket.dto.OrderAckTO;
@@ -12,10 +10,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -43,14 +41,14 @@ public class OrderController {
     }
 
     @GetMapping("/get_all_active_orders")
-    public ResponseEntity<Map<String, List<ActiveOrdersTO>>> getAllActiveOrders(){
-        Map<String,List<ActiveOrdersTO>> activeOrders = orderService.getAllActiveOrders();
+    public ResponseEntity<Map<String, List<ActiveOrdersTO>>> getAllActiveOrders(@RequestParam("branchId") UUID branchId){
+        Map<String,List<ActiveOrdersTO>> activeOrders = orderService.getAllActiveOrders(branchId);
         return new ResponseEntity<>(activeOrders, HttpStatus.OK);
     }
 
     @GetMapping("/get_history")
-    public ResponseEntity<Map<String, List<OrderHistoryTO>>> getHistory(){
-        return new ResponseEntity<>(orderService.getHistory(), HttpStatus.OK);
+    public ResponseEntity<Map<String, List<OrderHistoryTO>>> getHistory(@RequestParam("branchId") UUID branchId){
+        return new ResponseEntity<>(orderService.getHistory(branchId), HttpStatus.OK);
     }
 
     @PutMapping("/update_payment_type")

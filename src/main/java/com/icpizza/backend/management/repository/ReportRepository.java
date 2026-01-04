@@ -14,9 +14,9 @@ import java.util.UUID;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
     @Query("""
-    SELECT r FROM Report r WHERE r.branch.branchNumber= :branchNo AND r.type="INVENTORY" ORDER BY r.createdAt DESC
+    SELECT r FROM Report r WHERE r.branch.id= :branchId AND r.type="INVENTORY" ORDER BY r.createdAt DESC
 """)
-    List<Report> findAllByBranchDesc(@Param("branchNo") Integer branchNo);
+    List<Report> findAllByBranchDesc(@Param("branchId") UUID branchId);
 
     @Query("""
     SELECT r FROM Report r WHERE r.type=:type ORDER BY r.createdAt DESC

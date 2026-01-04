@@ -45,6 +45,6 @@ public class PaymentService {
 
         order.setIsPaid(true);
         orderRepository.save(order);
-        orderEvents.pushPaid(order.getId());
+        orderEvents.pushPaid(order.getId(), order.getBranch().getId());
     }
 }

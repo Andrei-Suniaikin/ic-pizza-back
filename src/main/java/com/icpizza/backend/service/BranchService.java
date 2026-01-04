@@ -23,6 +23,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -67,7 +69,7 @@ public class BranchService {
             branchRepository.save(branch);
             log.info("[BRANCH WORKLOAD] new level set to "+newLevel+"");
 
-            branchEvents.onAdminBaseInfoChange(getAdminBaseInfo(branch.getBranchNumber()));
+            branchEvents.onAdminBaseInfoChange(getAdminBaseInfo(branch.getId()));
         }
 
     }
@@ -82,13 +84,13 @@ public class BranchService {
     @Transactional
     public boolean setWorkloadLevel(UpdateWorkLoadLevelTO updateWorkLoadLevelTO) {
         log.info("[BRANCH WORKLOAD] setWorkloadLevel "+updateWorkLoadLevelTO.level()+"");
-        Branch branch = branchRepository.findByBranchNumber(updateWorkLoadLevelTO.branchNumber());
+        Optional<Branch> branchOpt = branchRepository.findById(updateWorkLoadLevelTO.branchId());
 
-        if(branch == null) return false;
-
+        if(branchOpt.isEmpty()) return false;
+        Branch branch = branchOpt.get();
         branch.setWorkLoadLevel(updateWorkLoadLevelTO.level());
         branchRepository.save(branch);
-        BaseAdminResponse baseAdminResponse = getAdminBaseInfo(updateWorkLoadLevelTO.branchNumber());
+        BaseAdminResponse baseAdminResponse = getAdminBaseInfo(updateWorkLoadLevelTO.branchId());
         branchEvents.onAdminBaseInfoChange(baseAdminResponse);
         return true;
     }
@@ -97,24 +99,26 @@ public class BranchService {
         return estimation.get(branch.getWorkLoadLevel()) + BASE_ORDER_TIME;
     }
 
-    public WorkLoadLevel getWorkLoadLevel(Integer branchNumber) {
-        Branch branch = branchRepository.findByBranchNumber(branchNumber);
+    public WorkLoadLevel getWorkLoadLevel(UUID branchId) {
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
         return branch.getWorkLoadLevel();
     }
 
-    public BranchTO getBranchInfo(Integer branchNumber) {
-        Branch branch = branchRepository.findByBranchNumber(branchNumber);
-        return new BranchTO(branch.getId(), branch.getExternalId(), branchNumber, branch.getBranchName());
+    public BranchTO getBranchInfo(UUID branchId) {
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+        return new BranchTO(branch.getId(), branch.getExternalId(), branch.getBranchNumber(), branch.getBranchName());
     }
 
-    public BaseAdminResponse getAdminBaseInfo(Integer branchNumber) {
-        log.info("[ADMIN BASE INFO] getAdminBaseInfo "+branchNumber);
-        WorkLoadLevel level = getWorkLoadLevel(branchNumber);
-        EventType cashType = getLastCashStage(branchNumber.toString());
-        EventType shiftType = getLastShiftStage(branchNumber.toString());
-        log.info("[BRANCH ADMIN BASE INFO]" + level + cashType + shiftType);
+    public BaseAdminResponse getAdminBaseInfo(UUID branchId) {
+        log.info("[ADMIN BASE INFO] getAdminBaseInfo "+branchId);
+        WorkLoadLevel level = getWorkLoadLevel(branchId);
+        EventType cashType = getLastCashStage(branchId);
+        EventType shiftType = getLastShiftStage(branchId);
+        log.info("[ADMIN BASE INFO] base info: {}, {}, {}",  level, cashType, shiftType);
 
-        return new BaseAdminResponse(level, cashType, shiftType, branchNumber);
+        return new BaseAdminResponse(level, cashType, shiftType, branchId);
     }
 
     @Transactional
@@ -123,7 +127,10 @@ public class BranchService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "branch_id and type are required");
         }
 
-        Integer lastShiftNo = eventRepository.findLastShiftNo(request.branchId());
+        Branch branch = branchRepository.findById(request.branchId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+
+        Integer lastShiftNo = eventRepository.findLastShiftNo(branch);
         int shiftNo;
 
         if(request.type() == EventType.OPEN_SHIFT_CASH_CHECK){
@@ -140,8 +147,7 @@ public class BranchService {
         if (request.type() == EventType.CLOSE_SHIFT_CASH_CHECK) {
             if (request.cashAmount() != null) {
                 Event open = eventRepository
-                        .findTopByBranchIdAndTypeAndShiftNoOrderByDatetimeDesc(request.branchId(),
-                                EventType.OPEN_SHIFT_CASH_CHECK, shiftNo)
+                        .findTodaysOpenCashEvent(request.branchId(), EventType.OPEN_SHIFT_CASH_CHECK, shiftNo)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "open shift not found"));
 
                 LocalDateTime from = open.getDatetime();
@@ -150,8 +156,6 @@ public class BranchService {
                 BigDecimal initialCash = open.getCashAmount() == null
                         ? BigDecimal.ZERO
                         : open.getCashAmount();
-
-                Branch branch = branchRepository.findByBranchNumber(1);
 
                 BigDecimal cashTransactions = transactionRepository.sumCashBetween(from, to, branch.getId());
                 if (cashTransactions == null) cashTransactions = BigDecimal.ZERO;
@@ -171,30 +175,44 @@ public class BranchService {
         ev.setDatetime(LocalDateTime.now(BAHRAIN));
         ev.setPrepPlan(request.prepPlan());
         ev.setCashAmount(request.cashAmount());
-        ev.setBranchId(request.branchId());
+        ev.setBranch(branch);
         ev.setShiftNo(shiftNo);
 
         eventRepository.save(ev);
 
-        BaseAdminResponse baseAdminResponse = getAdminBaseInfo(Integer.valueOf(request.branchId()));
+        BaseAdminResponse baseAdminResponse = getAdminBaseInfo(request.branchId());
 
         branchEvents.onAdminBaseInfoChange(baseAdminResponse);
 
         return new ShiftEventResponse("created", ev.getId(), shiftNo, warning);
     }
 
-    public EventType getLastCashStage(String branchId) {
-        Event event = eventRepository.findFirstByBranchIdAndCashAmountIsNotNullOrderByDatetimeDescIdDesc(branchId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        return event.getType();
+    public EventType getLastCashStage(UUID branchId) {
+        return eventRepository.findLastCashEvent(branchId)
+                .map(Event::getType)
+                .orElse(EventType.CLOSE_SHIFT_CASH_CHECK);
     }
 
-    public EventType getLastShiftStage(String branchId) {
-        Event event = eventRepository.findFirstByBranchIdAndCashAmountIsNullOrderByDatetimeDescIdDesc(branchId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public EventType getLastShiftStage(UUID branchId) {
+        return eventRepository.findLastDefaultEvent(branchId)
+                .map(Event::getType)
+                .orElse(EventType.CLOSE_SHIFT_EVENT);
+    }
 
-        return event.getType();
+    public List<BranchTO> getAllBranches() {
+        List<Branch> branches = branchRepository.findAll();
+        return branches.stream()
+                .map(this::toBranchTO)
+                .toList();
+    }
+
+    private BranchTO toBranchTO(Branch branch) {
+        return new BranchTO(
+                branch.getId(),
+                branch.getExternalId(),
+                branch.getBranchNumber(),
+                branch.getBranchName()
+        );
     }
 
     public VatResponse getVatStats(Integer branchNo, LocalDate fromDate, LocalDate toDate) {

@@ -3,12 +3,9 @@ package com.icpizza.backend.entity;
 import com.icpizza.backend.enums.EventType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Type;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "events")
@@ -35,8 +32,9 @@ public class Event {
     @Column(name = "cash_amount")
     private BigDecimal cashAmount;
 
-    @Column(name = "branch_id", nullable = false)
-    private String branchId;
+    @JoinColumn(name = "branch_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Branch branch;
 
     @Column(name = "shift_no", nullable = false)
     private Integer shiftNo;

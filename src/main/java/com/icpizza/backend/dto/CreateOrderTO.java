@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 
 public record CreateOrderTO (
@@ -28,7 +29,7 @@ public record CreateOrderTO (
         String notes,
         String address,
         Boolean isPaid,
-        Integer branchNumber
+        UUID branchId
 ){
         public record OrderItemsTO(
                 BigDecimal amount,

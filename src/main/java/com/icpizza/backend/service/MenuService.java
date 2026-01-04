@@ -109,7 +109,6 @@ public class MenuService {
                 new JahezDTOs.DataForJahezOrder(i.getName(), i.getCategory(), i.getSize()));
     }
 
-    /** По option.id из Jahez → имя доп. ингредиента. */
     public Optional<String> getExtraNameByExternalId(String externalId) {
         var snap = getMenu();
         String key = externalId == null ? null : externalId.trim();

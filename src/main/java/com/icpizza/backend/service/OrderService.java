@@ -49,7 +49,7 @@ public class OrderService {
     @Transactional
     public CreateOrderResponse createWebsiteOrder(CreateOrderTO orderTO) {
         boolean hasTelephone = orderTO.telephoneNo() == null ? false : true;
-        log.info("[CREATE WEBSITE ORDER] Creating new order from website");
+        log.info("[CREATE WEBSITE ORDER] Creating new order from the website");
 
         Customer customer = null;
 
@@ -57,7 +57,7 @@ public class OrderService {
             Optional<Customer> customerOptional = customerRepo.findByTelephoneNo(orderTO.telephoneNo());
             customer = customerOptional.orElseGet(() -> customerService.createCustomer(orderTO));
         }
-
+        log.info("[CREATE WEBSITE ORDER] {}", orderTO.branchId());
         Order order = orderMapper.toOrderEntity(orderTO, customer);
         branchService.recalcBranchWorkload(order.getBranch());
         order.setEstimation(branchService.getEstimationByBranch(order.getBranch()));
@@ -146,7 +146,7 @@ public class OrderService {
                         .doOnError(e -> log.error("Jahez ACCEPT failed extId={}", extId, e))
                         .subscribe();
 
-                orderEvents.pushAccepted(orderStatusUpdateTO.orderId());
+                orderEvents.pushAccepted(orderStatusUpdateTO.orderId(), orderStatusUpdateTO.branchId());
             }
             else if (orderStatusUpdateTO.orderStatus().equals("Cancelled")) {
                 log.info("[JAHEZ] Order with id "+order.getId()+" rejected: "+orderStatusUpdateTO.reason()+".");
@@ -165,7 +165,7 @@ public class OrderService {
                 try { orderItemRepo.deleteByOrderId(order.getId()); } catch (Exception ignore) {}
                 orderRepo.delete(order);
 
-                orderEvents.pushDeleted(order.getId());
+                orderEvents.pushDeleted(order.getId(), orderStatusUpdateTO.branchId());
             }
             else {
                 throw new IllegalArgumentException("Unsupported orderStatus for Jahez: " + st);
@@ -203,8 +203,9 @@ public class OrderService {
                     (order.getCustomer() != null) ? order.getCustomer().getTelephoneNo() : null,
                     (order.getCustomer() != null) ? order.getCustomer().getName() : null,
                      order.getId(),
-                    "Picked Up"
-            ));        }
+                    "Picked Up",
+                    order.getBranch().getId()
+                    ));        }
 
         if (orderStatusUpdateTO.orderStatus().equals("Oven")) {
             Order order = orderRepo.findById(orderStatusUpdateTO.orderId())
@@ -214,7 +215,7 @@ public class OrderService {
             order.setStatus(OrderStatus.toLabel(OrderStatus.OVEN));
 
             orderRepo.save(order);
-            orderPostProcessor.onOrderInOven(new PushOrderStatusUpdated(orderStatusUpdateTO.orderId(), orderStatusUpdateTO.orderStatus()));
+            orderPostProcessor.onOrderInOven(new PushOrderStatusUpdated(orderStatusUpdateTO.orderId(), orderStatusUpdateTO.orderStatus(), order.getBranch().getId()));
         }
     }
 
@@ -260,8 +261,8 @@ public class OrderService {
         return new EditOrderResponse(orderToEdit.getId());
     }
 
-    public Map<String, List<ActiveOrdersTO>> getAllActiveOrders() {
-        List<Order> orders = orderRepo.findActiveOrders();
+    public Map<String, List<ActiveOrdersTO>> getAllActiveOrders(UUID branchId) {
+        List<Order> orders = orderRepo.findActiveOrders(branchId);
         if (orders.isEmpty()) return Map.of("orders", List.of());
 
         var ids = orders.stream().map(Order::getId).toList();
@@ -419,8 +420,8 @@ public class OrderService {
         public static BigDecimal nz(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }
     }
 
-    public Map<String, List<OrderHistoryTO>> getHistory(){
-        List<Order> orders = orderRepo.findReadySince(LocalDateTime.now(BAHRAIN).minusDays(1));
+    public Map<String, List<OrderHistoryTO>> getHistory(UUID branchId) {
+        List<Order> orders = orderRepo.findReadySince(branchId ,LocalDateTime.now(BAHRAIN).minusDays(1));
 
         MenuSnapshot snap = menuService.getMenu();
 

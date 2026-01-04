@@ -9,7 +9,9 @@ import com.icpizza.backend.repository.ComboItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,7 +32,8 @@ public class OrderMapper {
 
     public Order toOrderEntity(CreateOrderTO orderTO, Customer customer){
         Order order = new Order();
-        Branch branch = branchRepository.findByBranchNumber(orderTO.branchNumber());
+        Branch branch = branchRepository.findById(orderTO.branchId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Illegal branch id"));
         order.setAmountPaid(orderTO.amountPaid());
         order.setOrderNo(random.nextInt(1, 999));
         order.setType(orderTO.orderType());
