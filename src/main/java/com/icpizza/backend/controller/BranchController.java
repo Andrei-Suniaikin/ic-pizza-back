@@ -2,14 +2,18 @@ package com.icpizza.backend.controller;
 
 import com.icpizza.backend.dto.*;
 import com.icpizza.backend.enums.WorkLoadLevel;
+import com.icpizza.backend.management.dto.VatResponse;
 import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.service.BranchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -41,4 +45,12 @@ public class BranchController {
     @PostMapping("/send_shift_event")
     public ResponseEntity<ShiftEventResponse> sendShiftEvent(@RequestBody ShiftEventRequest request){
         return new ResponseEntity<>(branchService.createEvent(request), HttpStatus.OK);
-    }}
+    }
+
+    @GetMapping("/get_vat_stats")
+    public ResponseEntity<VatResponse> getVatStats(@RequestParam("branchId") Integer branchNo,
+                                                   @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+                                                   @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate){
+        return new ResponseEntity<>(branchService.getVatStats(branchNo, fromDate, toDate), HttpStatus.OK);
+    }
+}

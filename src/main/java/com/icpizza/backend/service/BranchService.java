@@ -5,6 +5,7 @@ import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.entity.Event;
 import com.icpizza.backend.enums.EventType;
 import com.icpizza.backend.enums.WorkLoadLevel;
+import com.icpizza.backend.management.dto.VatResponse;
 import com.icpizza.backend.repository.*;
 import com.icpizza.backend.websocket.BranchEvents;
 import jakarta.transaction.Transactional;
@@ -16,7 +17,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -192,5 +195,10 @@ public class BranchService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         return event.getType();
+    }
+
+    public VatResponse getVatStats(Integer branchNo, LocalDate fromDate, LocalDate toDate) {
+        Branch branch = branchRepository.findByBranchNumber(branchNo);
+        return orderRepository.getVatStat(branch.getId(), fromDate.atStartOfDay(), toDate.atTime(LocalTime.MAX));
     }
 }

@@ -78,21 +78,24 @@ public class CustomerService {
         return customer;
     }
 
+    @Transactional(readOnly = true)
     public boolean isWaitForName(String senderPhone) {
-        return customerRepository.findByTelephoneNo(senderPhone)
+        return customerRepository.findByTelephoneNoWithoutLock(senderPhone)
                 .map(Customer::getWaitingForName)
                 .map(v -> v == 1)
                 .orElse(false);
     }
 
+    @Transactional(readOnly = true)
     public boolean userHasName(String senderPhone) {
-        Optional<Customer> customer = customerRepository.findByTelephoneNo(senderPhone);
+        Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(senderPhone);
         if(customer.isPresent() && customer.get().getName()!=null) return true;
         else return false;
     }
 
+    @Transactional(readOnly = true)
     public Customer saveUserName(String senderPhone, String messageText) {
-        Optional<Customer> customer = customerRepository.findByTelephoneNo(senderPhone);
+        Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(senderPhone);
         if (customer.isPresent()){
             Customer customerToEdit = customer.get();
             customerToEdit.setName(messageText);
@@ -103,6 +106,7 @@ public class CustomerService {
         else throw new IllegalArgumentException("Customer with phone number "+senderPhone+" is not found");
     }
 
+    @Transactional
     public void setWaitForName(String senderPhone, boolean b) {
         Optional<Customer> customer = customerRepository.findByTelephoneNo(senderPhone);
         if (customer.isPresent()){
