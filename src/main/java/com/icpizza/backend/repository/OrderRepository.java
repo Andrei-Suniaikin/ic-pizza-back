@@ -2,6 +2,7 @@ package com.icpizza.backend.repository;
 
 import com.icpizza.backend.dto.SalesHeatmapProjection;
 import com.icpizza.backend.entity.Order;
+import com.icpizza.backend.management.dto.VatResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -158,4 +160,19 @@ ORDER BY dd.dough_type, dd.shift_date
         ORDER BY dayName, hourOfDay
     """,  nativeQuery = true)
     List<SalesHeatmapProjection> getRawSellsByHourStats(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = """
+    select new com.icpizza.backend.management.dto.VatResponse(b.branchName ,count(o), COALESCE(SUM(o.amountPaid), 0))
+    from Order o 
+    Join o.branch b
+    where b.id=:branchId
+    and o.createdAt >= :startDate
+    and o.createdAt <= :endDate
+    group by b.branchName
+""")
+     VatResponse getVatStat(
+             @Param("branchId") UUID branchId,
+             @Param("startDate") LocalDateTime startDate,
+             @Param("endDate") LocalDateTime endDate
+     );
 }
