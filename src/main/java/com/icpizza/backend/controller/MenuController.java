@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -28,8 +29,10 @@ public class MenuController {
 
     @GetMapping("/get_base_app_info")
     public HashMap<String, Object> getBaseAppInfo(@RequestParam(value = "userId", required = false)
-                                                                  String userId){
-        HashMap<String, Object> resp = menuService.getBaseAppInfo();
+                                                                  String userId,
+                                                  @RequestParam(name = "branchId",  required = true)
+                                                  UUID branchId){
+        HashMap<String, Object> resp = menuService.getBaseAppInfo(branchId);
 
 
         if (userId != null && !userId.isBlank()) {
