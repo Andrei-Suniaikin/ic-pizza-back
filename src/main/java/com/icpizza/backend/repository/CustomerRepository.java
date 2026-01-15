@@ -17,6 +17,10 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
     Optional<Customer> findByTelephoneNo(String telephoneNo);
 
+    @Query("""
+SELECT c from Customer c Where c.telephoneNo=:telephoneNo""")
+    Optional<Customer> findByTelephoneNoWithoutLock(@Param("telephoneNo") String telephoneNo);
+
     @Query("select coalesce(sum(c.amountPaid), 0) from Customer c")
     BigDecimal sumAllAmountPaid();
 

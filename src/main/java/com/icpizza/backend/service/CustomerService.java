@@ -4,6 +4,7 @@ import com.icpizza.backend.dto.CheckCustomerResponse;
 import com.icpizza.backend.dto.CreateOrderTO;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
+import com.icpizza.backend.keeta.dto.CreateKeetaOrderTO;
 import com.icpizza.backend.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,11 +47,28 @@ public class CustomerService {
         customer.setName(order.customerName());
         customer.setTelephoneNo(order.telephoneNo());
         customer.setAmountOfOrders(0);
-        customer.setAmountPaid(order.amountPaid());
+        customer.setAmountPaid(BigDecimal.ZERO);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         customer.setLastOrder(LocalDateTime.now(BAHRAIN).format(fmt));
         customer.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
         customer.setAddress(null);
+        customer.setWaitingForName(null);
+
+        customerRepository.save(customer);
+        return customer;
+    }
+
+    @Transactional
+    public Customer createKeetaCustomer(CreateKeetaOrderTO order){
+        Customer customer = new Customer();
+        customer.setName(order.name());
+        customer.setTelephoneNo(order.telephoneNo());
+        customer.setAmountOfOrders(0);
+        customer.setAmountPaid(order.amountPaid());
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        customer.setLastOrder(LocalDateTime.now(BAHRAIN).format(fmt));
+        customer.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
+        customer.setAddress(order.address());
         customer.setWaitingForName(null);
 
         customerRepository.save(customer);
