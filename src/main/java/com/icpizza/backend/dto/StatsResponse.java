@@ -36,6 +36,8 @@ public record StatsResponse(
         List<SellsByHourStat> sellsByHour,
         Long totalTalabatOrders,
         BigDecimal totalTalabatRevenue,
-        List<TopFiveProducts> topProducts
+        List<TopFiveProducts> topProducts,
+        Long totalKeetaOrders,
+        BigDecimal totalKeetaRevenue
 ) {
 }

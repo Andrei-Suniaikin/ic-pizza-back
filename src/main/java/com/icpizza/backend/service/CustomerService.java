@@ -111,7 +111,6 @@ public class CustomerService {
         else return false;
     }
 
-    @Transactional(readOnly = true)
     public Customer saveUserName(String senderPhone, String messageText) {
         Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(senderPhone);
         if (customer.isPresent()){
