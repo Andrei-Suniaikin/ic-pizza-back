@@ -44,8 +44,10 @@ public class StatsService {
 
         long jahezOrders   = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "Jahez");
         long talabatOrders = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "talabat");
+        long keetaOrders = orderRepo.countByCreatedAtBetweenAndOrderType(start, end, "Keeta");
         BigDecimal jahezRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "Jahez"));
         BigDecimal talabatRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "talabat"));
+        BigDecimal keetaRevenue = nvl(orderRepo.sumAmountPaidBetweenAndOrderType(start, end, "Keeta"));
 
         BigDecimal sumPaid = nvl(orderRepo.sumAllAmountPaidAllTime());
         long uniqueCustomers = customerRepo.countDistinctTelephoneNo();
@@ -100,8 +102,10 @@ public class StatsService {
                 getSellsByHourStat(start, end),
                 talabatOrders,
                 talabatRevenue,
-                getTopFiveProducts(start, end)
-        );
+                getTopFiveProducts(start, end),
+                keetaOrders,
+                keetaRevenue
+                );
     }
 
     private List<DoughUsageTO> getDoughUsage() {

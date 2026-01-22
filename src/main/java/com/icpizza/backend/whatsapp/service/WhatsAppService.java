@@ -142,7 +142,7 @@ public class WhatsAppService {
         payload.put("type", "template");
 
         java.util.Map<String, Object> template = new java.util.HashMap<>();
-        template.put("name", "orderready");
+        template.put("name", "orderready2");
         template.put("language", java.util.Map.of("code", "en"));
 
         payload.put("template", template);
