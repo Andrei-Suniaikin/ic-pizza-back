@@ -37,7 +37,6 @@ public class ConsumptionService {
     private final EntityManager em;
     private final ProductRepository productRepository;
     private final ConsumptionItemRepository consumptionItemRepository;
-    private final ConsumptionItemRepository consumptionItemItemRepository;
 
     private static final ZoneId TZ = ZoneId.of("Asia/Bahrain");
     private final ReportMapper reportMapper;
@@ -99,7 +98,7 @@ public class ConsumptionService {
             total = total.add(totalFinalPrice);
         }
 
-        log.info("[CONSUMPTION REPORT] total sum: " + total);
+        log.info("[CONSUMPTION REPORT] cookTotal sum: " + total);
         consumptionItemRepository.saveAll(items);
         report.setFinalPrice(total.setScale(3, RoundingMode.HALF_UP));
         reportRepository.save(report);
@@ -109,14 +108,14 @@ public class ConsumptionService {
     private Map<Long, ProductInfo> productsFromPreviousInventory(UUID branchId, String prevPrefix, Set<Long> ids) {
         Report prevInventory = pickLatest(branchId, ReportType.INVENTORY, prevPrefix);
         if (prevInventory == null) return Map.of();
-        return inventoryProductRepository.loadByReport(prevInventory.getId(), ids).stream()
+        return inventoryProductRepository.loadByReport(prevInventory.getId(), ids, BigDecimal.ZERO).stream()
                 .collect(Collectors.toMap(ProductInfo::id, x -> x));
     }
 
     private Map<Long, ProductInfo> productsFromCurrentInventory(UUID branchId, String curPrefix, Set<Long> ids) {
         Report curInventory = pickLatest(branchId, ReportType.INVENTORY, curPrefix);
         if (curInventory == null) return Map.of();
-        return inventoryProductRepository.loadByReport(curInventory.getId(), ids).stream()
+        return inventoryProductRepository.loadByReport(curInventory.getId(), ids, BigDecimal.ZERO).stream()
                 .collect(Collectors.toMap(ProductInfo::id, x -> x));
     }
 
@@ -137,7 +136,7 @@ public class ConsumptionService {
         Report report = reportRepository.findTopByTypeOrderByCreatedAtDesc(ReportType.PRODUCT_CONSUMPTION)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Report not found"));
 
-        List<ProductConsumptionItem> products = consumptionItemItemRepository.findAllByReport(report);
+        List<ProductConsumptionItem> products = consumptionItemRepository.findAllByReport(report);
 
         return reportMapper.toConsumptionReportTO(report, products);
     }

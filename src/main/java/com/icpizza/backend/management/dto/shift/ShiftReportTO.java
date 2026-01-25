@@ -7,15 +7,19 @@ import java.util.List;
 public record ShiftReportTO(
         Long id,
         String title,
-        Double totalHours,
+        Double cookTotalHours,
+        Double managerTotalHours,
         LocalDate creationTimeStamp,
         Integer branchNo,
         List<ShiftInfoTO> shifts
 ) {
     public record ShiftInfoTO(
             LocalDate shiftDate,
-            LocalTime startTime,
-            LocalTime endTime,
-            Double total
+            LocalTime cookStartTime,
+            LocalTime cookEndTime,
+            Double cookTotal,
+            LocalTime managerStartTime,
+            LocalTime managerEndTime,
+            Double managerTotal
     ){}
 }

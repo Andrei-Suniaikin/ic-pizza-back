@@ -16,7 +16,8 @@ public record ReportTO(
 ) {
     public record InventoryProductsTO(
             ProductTO product,
-            BigDecimal quantity,
+            BigDecimal kitchenQuantity,
+            BigDecimal storageQuantity,
             BigDecimal finalPrice
     ){}
 }

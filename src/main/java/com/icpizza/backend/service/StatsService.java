@@ -31,7 +31,7 @@ public class StatsService {
 
     @Transactional(readOnly = true)
     public StatsResponse getStatistics(LocalDate startDate, LocalDate finishDate, LocalDate certainDate) {
-        log.info("Getting Stats...");
+        log.info("Getting Stats... from {} to {}", startDate,  finishDate);
         LocalDateTime start = startDate.atStartOfDay(BAHRAIN).toLocalDateTime().plusHours(2);
         LocalDateTime end   = finishDate.plusDays(1).atStartOfDay(BAHRAIN).toLocalDateTime()
                 .plusHours(1).plusMinutes(59).plusSeconds(59);
