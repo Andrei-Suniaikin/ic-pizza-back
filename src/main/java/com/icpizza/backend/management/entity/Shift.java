@@ -1,5 +1,6 @@
 package com.icpizza.backend.management.entity;
 
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,10 +23,16 @@ public class Shift {
     private Report report;
 
     private LocalDate shiftDate;
-
-    private LocalTime startShift;
-
-    private LocalTime endShift;
-
-    private double totalHours;
+    @Column(nullable = true)
+    private LocalTime cookStartShift;
+    @Column(nullable = true)
+    private LocalTime cookEndShift;
+    @Column(nullable = true)
+    private double cookTotalHours;
+    @Column(nullable = true)
+    private LocalTime managerStartShift;
+    @Column(nullable = true)
+    private LocalTime managerEndShift;
+    @Column(nullable = true)
+    private double managerTotalHours;
 }

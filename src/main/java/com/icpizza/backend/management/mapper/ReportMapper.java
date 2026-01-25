@@ -68,7 +68,8 @@ public class ReportMapper {
             try {
                 inventoryProduct.setReport(report);
                 inventoryProduct.setProduct(productRepository.getReferenceById(inventoryProductTO.id()));
-                inventoryProduct.setQuantity(inventoryProductTO.quantity());
+                inventoryProduct.setKitchenQuantity(inventoryProductTO.kitchenQuantity());
+                inventoryProduct.setStorageQuantity(inventoryProductTO.storageQuantity());
                 inventoryProduct.setTotalPrice(inventoryProductTO.finalPrice());
                 return inventoryProduct;
             }
@@ -87,13 +88,14 @@ public class ReportMapper {
             InventoryProduct inventoryProduct  =  new InventoryProduct();
             inventoryProduct.setProduct(product);
             inventoryProduct.setReport(report);
-            inventoryProduct.setQuantity(inventoryProductTO.quantity());
+            inventoryProduct.setKitchenQuantity(inventoryProductTO.kitchenQuantity());
+            inventoryProduct.setStorageQuantity(inventoryProductTO.storageQuantity());
             inventoryProduct.setTotalPrice(inventoryProductTO.finalPrice());
             return inventoryProduct;
         }).toList();
     }
 
-    public ReportTO toOrderTO(Report report) {
+    public ReportTO toReportTO(Report report) {
         List<InventoryProduct> products = inventoryProductRepository.getByReport(report);
         return new ReportTO(
                 report.getId(),
@@ -110,7 +112,8 @@ public class ReportMapper {
         return products.stream().map(product -> {
             ReportTO.InventoryProductsTO inventoryProductsTO = new ReportTO.InventoryProductsTO(
                     toProductTO(product.getProduct()),
-                    product.getQuantity(),
+                    product.getKitchenQuantity(),
+                    product.getStorageQuantity(),
                     product.getTotalPrice()
             );
             return inventoryProductsTO;

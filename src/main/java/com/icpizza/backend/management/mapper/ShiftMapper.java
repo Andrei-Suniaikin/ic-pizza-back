@@ -1,9 +1,6 @@
 package com.icpizza.backend.management.mapper;
 
-import com.icpizza.backend.management.dto.shift.BaseShiftResponse;
-import com.icpizza.backend.management.dto.shift.CreateShiftReportTO;
-import com.icpizza.backend.management.dto.shift.EditShiftReportTO;
-import com.icpizza.backend.management.dto.shift.ShiftReportTO;
+import com.icpizza.backend.management.dto.shift.*;
 import com.icpizza.backend.management.entity.Report;
 import com.icpizza.backend.management.entity.Shift;
 import com.icpizza.backend.management.enums.ReportType;
@@ -30,11 +27,15 @@ public class ShiftMapper {
 
     public List<BaseShiftResponse> toBaseShiftResponse(List<Report> reports) {
         return reports.stream()
-                .map(report -> {return new BaseShiftResponse(
-                        report.getId(),
-                        report.getTitle(),
-                        report.getBranch().getBranchNumber(),
-                        shiftRepository.sumTotalByReport(report));
+                .map(report -> {
+                    ReportHoursDTO reportHours = shiftRepository.sumTotalByReport(report);
+                    return new BaseShiftResponse(
+                            report.getId(),
+                            report.getTitle(),
+                            report.getBranch().getBranchNumber(),
+                            reportHours.cookHours(),
+                            reportHours.managerHours()
+                    );
                 }).toList();
     }
 
@@ -53,10 +54,13 @@ public class ShiftMapper {
         shifts.forEach(shift -> {
             Shift newShift = new Shift();
             newShift.setReport(report);
-            newShift.setEndShift(shift.endTime());
-            newShift.setStartShift(shift.startTime());
+            newShift.setCookEndShift(shift.cookEndTime());
+            newShift.setCookStartShift(shift.cookStartTime());
             newShift.setShiftDate(shift.shiftDate());
-            newShift.setTotalHours((shift.total() == null) ? 0.0 : shift.total());
+            newShift.setCookTotalHours((shift.cookTotal() == null) ? 0.0 : shift.cookTotal());
+            newShift.setManagerEndShift(shift.managerEndTime());
+            newShift.setManagerStartShift(shift.managerStartTime());
+            newShift.setManagerTotalHours((shift.managerTotal() == null) ? 0.0 : shift.managerTotal());
             shiftEntities.add(newShift);
         });
 
@@ -64,11 +68,13 @@ public class ShiftMapper {
     }
 
     public BaseShiftResponse toBaseShiftResponse(Report report) {
+        ReportHoursDTO reportHours = shiftRepository.sumTotalByReport(report);
         return new BaseShiftResponse(
                 report.getId(),
                 report.getTitle(),
                 report.getBranch().getBranchNumber(),
-                shiftRepository.sumTotalByReport(report)
+                reportHours.cookHours(),
+                reportHours.managerHours()
         );
     }
 
@@ -77,10 +83,13 @@ public class ShiftMapper {
         shifts.forEach(shift -> {
             Shift newShift = new Shift();
             newShift.setReport(report);
-            newShift.setEndShift(shift.endTime());
-            newShift.setStartShift(shift.startTime());
+            newShift.setCookEndShift(shift.cookEndTime());
+            newShift.setCookStartShift(shift.cookStartTime());
             newShift.setShiftDate(shift.shiftDate());
-            newShift.setTotalHours(shift.total());
+            newShift.setCookTotalHours(shift.cookTotal());
+            newShift.setManagerTotalHours(shift.managerTotal());
+            newShift.setManagerEndShift(shift.managerEndTime());
+            newShift.setManagerStartShift(shift.managerStartTime());
             shiftEntities.add(newShift);
         });
 
@@ -88,10 +97,12 @@ public class ShiftMapper {
     }
 
     public ShiftReportTO toShiftTO(Report report, List<Shift> shifts) {
+        ReportHoursDTO reportHours = shiftRepository.sumTotalByReport(report);
         return new ShiftReportTO(
                 report.getId(),
                 report.getTitle(),
-                shiftRepository.sumTotalByReport(report),
+                reportHours.cookHours(),
+                reportHours.managerHours(),
                 report.getCreatedAt().toLocalDate(),
                 report.getBranch().getBranchNumber(),
                 toShiftInfoTO(shifts)
@@ -102,9 +113,13 @@ public class ShiftMapper {
         return shifts.stream()
                 .map(shift -> {return new ShiftReportTO.ShiftInfoTO(
                         shift.getShiftDate(),
-                        shift.getStartShift(),
-                        shift.getEndShift(),
-                        shift.getTotalHours());
+                        shift.getCookStartShift(),
+                        shift.getCookEndShift(),
+                        shift.getCookTotalHours(),
+                        shift.getManagerStartShift(),
+                        shift.getManagerEndShift(),
+                        shift.getManagerTotalHours()
+                    );
                 }).toList();
     }
 }

@@ -12,9 +12,12 @@ public record CreateShiftReportTO(
 ) {
     public record ShiftInfoTO(
             LocalDate shiftDate,
-            LocalTime startTime,
-            LocalTime endTime,
-            Double total
+            LocalTime cookStartTime,
+            LocalTime cookEndTime,
+            Double cookTotal,
+            LocalTime managerStartTime,
+            LocalTime managerEndTime,
+            Double managerTotal
     ) {
     }
 }

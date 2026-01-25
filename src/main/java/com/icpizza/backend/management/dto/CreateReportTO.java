@@ -15,7 +15,8 @@ public record CreateReportTO(
 ) {
     public record CreateReportProductsTO(
             Long id,
-            BigDecimal quantity,
+            BigDecimal kitchenQuantity,
+            BigDecimal storageQuantity,
             BigDecimal finalPrice
     ){}
 }

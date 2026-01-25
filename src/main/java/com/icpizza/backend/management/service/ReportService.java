@@ -2,14 +2,11 @@ package com.icpizza.backend.management.service;
 
 import com.icpizza.backend.management.dto.*;
 import com.icpizza.backend.management.entity.InventoryProduct;
-import com.icpizza.backend.management.entity.Product;
 import com.icpizza.backend.management.entity.Report;
 import com.icpizza.backend.management.enums.ReportType;
-import com.icpizza.backend.management.mapper.ProductMapper;
 import com.icpizza.backend.management.mapper.ReportMapper;
 import com.icpizza.backend.management.mapper.Titles;
 import com.icpizza.backend.management.repository.InventoryProductRepository;
-import com.icpizza.backend.management.repository.ProductRepository;
 import com.icpizza.backend.management.repository.ReportRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -104,7 +101,7 @@ public class ReportService {
             Report report = reportRepository.findById(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-            return reportMapper.toOrderTO(report);
+            return reportMapper.toReportTO(report);
         }
         catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);

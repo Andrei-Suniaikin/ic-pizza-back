@@ -4,6 +4,7 @@ public record BaseShiftResponse(
         Long id,
         String title,
         Integer branchNo,
-        Double totalHours
+        Double cookTotalHours,
+        Double managerTotalHours
 ) {
 }

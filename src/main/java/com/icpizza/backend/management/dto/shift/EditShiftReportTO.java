@@ -14,8 +14,11 @@ public record EditShiftReportTO(
 ) {
     public record EditShiftInfoTO(
             LocalDate shiftDate,
-            LocalTime startTime,
-            LocalTime endTime,
-            Double total
+            LocalTime cookStartTime,
+            LocalTime cookEndTime,
+            Double cookTotal,
+            LocalTime managerStartTime,
+            LocalTime managerEndTime,
+            Double managerTotal
     ) {}
 }

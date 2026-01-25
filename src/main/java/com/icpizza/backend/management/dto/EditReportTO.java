@@ -17,7 +17,8 @@ public record EditReportTO(
 ) {
     public record EditReportProductsTO(
             Long id,
-            BigDecimal quantity,
+            BigDecimal kitchenQuantity,
+            BigDecimal storageQuantity,
             BigDecimal finalPrice
     ){}
 }

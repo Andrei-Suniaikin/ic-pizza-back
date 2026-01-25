@@ -25,8 +25,11 @@ public class InventoryProduct {
     @JoinColumn(name = "product")
     private Product product;
 
-    @Column(precision = 19, scale=3)
-    private BigDecimal quantity;
+    @Column(precision = 19, scale=3, name = "storage_quantity")
+    private BigDecimal storageQuantity;
+
+    @Column(precision = 19, scale=3, name = "kitchen_quantity")
+    private BigDecimal kitchenQuantity;
 
     @Column(precision = 19, scale=3)
     private BigDecimal totalPrice;
