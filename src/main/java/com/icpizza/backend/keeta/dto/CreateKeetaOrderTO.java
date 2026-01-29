@@ -20,7 +20,7 @@ public record CreateKeetaOrderTO(
         BigDecimal amountPaid,
         @JsonProperty("timestamp")
         LocalDateTime createdAt,
-        String status,
+        Integer status,
         UUID branchId
 ) {
     public record OrderItemTO(

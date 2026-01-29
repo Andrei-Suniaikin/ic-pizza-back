@@ -168,6 +168,7 @@ ORDER BY dd.dough_type, dd.shift_date
     where b.id=:branchId
     and o.createdAt >= :startDate
     and o.createdAt <= :endDate
+    and o.type = 'Pick Up'
     group by b.branchName
 """)
      VatResponse getVatStat(
