@@ -5,15 +5,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.icpizza.backend.cache.MenuSnapshot;
 import com.icpizza.backend.dto.UpdateAvailabilityRequest;
-import com.icpizza.backend.entity.ExtraIngr;
-import com.icpizza.backend.entity.JahezMenu;
-import com.icpizza.backend.entity.MenuItem;
+import com.icpizza.backend.entity.*;
 import com.icpizza.backend.jahez.api.JahezApi;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
 import com.icpizza.backend.mapper.MenuMapper;
-import com.icpizza.backend.repository.ExtraIngrRepository;
-import com.icpizza.backend.repository.JahezMenuRepository;
-import com.icpizza.backend.repository.MenuItemRepository;
+import com.icpizza.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,30 +37,32 @@ public class MenuService {
     private final JahezMenuRepository jahezMenuRepository;
     private final JahezApi jahezApi;
     private final ObjectMapper objectMapper;
+    private final BranchAvailabilityRepository branchAvailabilityRepository;
+    private final BranchRepository branchRepository;
 
-    @Cacheable(cacheNames = "menu", key = "'all'")
-    public MenuSnapshot getMenu() {
-        return buildSnapshot();
+    @Cacheable(cacheNames = "menu", key = "#branchId")
+    public MenuSnapshot getMenu(UUID branchId) {
+        return buildSnapshot(branchId);
     }
 
-    @CachePut(cacheNames = "menu", key = "'all'")
-    public MenuSnapshot reloadMenu() {
-        return buildSnapshot();
+    @CachePut(cacheNames = "menu", key = "#branchId")
+    public MenuSnapshot reloadMenu(UUID branchId) {
+        return buildSnapshot(branchId);
     }
 
-    private MenuSnapshot buildSnapshot() {
-        List<MenuItem> itemDTOs = menuRepository.findAllByOrderByIdAsc().stream()
+    private MenuSnapshot buildSnapshot(UUID branchId) {
+        List<MenuItem> itemDTOs = branchAvailabilityRepository.findAllByBranchIdByOrderByIdAsc(branchId).stream()
                 .map(menuItem -> MenuItem.builder()
-                        .id(menuItem.getId())
-                        .category(menuItem.getCategory())
-                        .name(menuItem.getName())
-                        .size(menuItem.getSize())
-                        .price(menuItem.getPrice())
-                        .photo(menuItem.getPhoto())
-                        .description(menuItem.getDescription())
-                        .available(menuItem.isAvailable())
-                        .isBestSeller(menuItem.isBestSeller())
-                        .externalId(menuItem.getExternalId())
+                        .id(menuItem.getItem().getId())
+                        .category(menuItem.getItem().getCategory())
+                        .name(menuItem.getItem().getName())
+                        .size(menuItem.getItem().getSize())
+                        .price(menuItem.getItem().getPrice())
+                        .photo(menuItem.getItem().getPhoto())
+                        .description(menuItem.getItem().getDescription())
+                        .available(menuItem.getIsAvailable())
+                        .isBestSeller(menuItem.getItem().isBestSeller())
+                        .externalId(menuItem.getItem().getExternalId())
                         .build())
                 .toList();
 
@@ -102,21 +100,20 @@ public class MenuService {
                 .build();
     }
 
-    public Optional<JahezDTOs.DataForJahezOrder> getItemDataForJahezOrderByExternalId(String externalId) {
-        var snap = getMenu();
-        String key = externalId == null ? null : externalId.trim();
-        return snap.itemByExt(key).map(i ->
-                new JahezDTOs.DataForJahezOrder(i.getName(), i.getCategory(), i.getSize()));
-    }
-
-    /** По option.id из Jahez → имя доп. ингредиента. */
-    public Optional<String> getExtraNameByExternalId(String externalId) {
-        var snap = getMenu();
-        String key = externalId == null ? null : externalId.trim();
-        return snap.extraByExt(key).map(ExtraIngr::getName);
-    }
-
-    private static String nvl(String s) { return s == null ? "" : s; }
+//    public Optional<JahezDTOs.DataForJahezOrder> getItemDataForJahezOrderByExternalId(String externalId) {
+//        var snap = getMenu();
+//        String key = externalId == null ? null : externalId.trim();
+//        return snap.itemByExt(key).map(i ->
+//                new JahezDTOs.DataForJahezOrder(i.getName(), i.getCategory(), i.getSize()));
+//    }
+//
+//    public Optional<String> getExtraNameByExternalId(String externalId) {
+//        var snap = getMenu();
+//        String key = externalId == null ? null : externalId.trim();
+//        return snap.extraByExt(key).map(ExtraIngr::getName);
+//    }
+//
+//    private static String nvl(String s) { return s == null ? "" : s; }
 
     @Transactional
     public Integer updateAvailability(UpdateAvailabilityRequest request) {
@@ -128,30 +125,30 @@ public class MenuService {
         for(UpdateAvailabilityRequest.Change change: request.changes()){
             switch (change.type()){
                 case "group" -> {
-                    result+= menuRepository.updateAvailableByNameIgnoreCase(change.name().toLowerCase(),
-                                                                        change.enabled());
+                    result+= branchAvailabilityRepository.updateAvailableByNameIgnoreCase(change.name().toLowerCase(),
+                                                                        change.enabled(), request.branchId());
                 }
                 case "dough" -> {
                     if(change.name().equalsIgnoreCase("Brick Dough")){
-                        result+=menuRepository.updateAvailableByCategoryIgnoreCase("Brick Pizzas", change.enabled());
+                        result+=branchAvailabilityRepository.updateAvailableByCategoryIgnoreCase("Brick Pizzas", change.enabled(), request.branchId());
                         break;
                     }
-                    result += menuRepository.updateAvailableBySize(change.name(), change.enabled());
+                    result += branchAvailabilityRepository.updateAvailableBySize(change.name(), change.enabled(), request.branchId());
                 }
                 default -> throw new IllegalArgumentException("Unknown change type: " + change.type());
             }
         }
 
-        MenuSnapshot menu = reloadMenu();
-        pushToJahez(menu);
+        MenuSnapshot menu = reloadMenu(request.branchId());
+        pushToJahez(menu, request.branchId());
         return  result;
     }
 
-    public HashMap<String, Object> getBaseAppInfo() {
-        return menuMapper.toBaseInfoSnakeCase(getMenu());
+    public HashMap<String, Object> getBaseAppInfo(UUID branchId) {
+        return menuMapper.toBaseInfoSnakeCase(getMenu(branchId));
     }
 
-    public void pushToJahez(MenuSnapshot menu) {
+    public void pushToJahez(MenuSnapshot menu, UUID branchId) {
         try {
             Set<String> disabledExtIds = menu.getItems().stream()
                     .filter(item -> !item.isAvailable())
@@ -159,7 +156,11 @@ public class MenuService {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
-            log.info("[STOP LIST IDs] "+disabledExtIds+"");
+            List<Branch> excludeBranches = branchRepository.findAllExcludeBranches(branchId);
+
+            Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new RuntimeException("Branch not found"));
+
+            String suffix = "-" + branch.getExternalId().toUpperCase();
 
             List<JahezMenu> baseJsons = jahezMenuRepository.findAll();
 
@@ -167,7 +168,7 @@ public class MenuService {
 
             for (JahezMenu jahezMenu : baseJsons) {
                 JsonNode root = objectMapper.readTree(jahezMenu.getJson());
-                JsonNode patched = patchJson(root, disabledExtIds, menu);
+                JsonNode patched = patchJson(root, disabledExtIds, menu, excludeBranches, branch, suffix);
                 log.info("[JAHEZ MENU] successfully updated products "+patched+"");
                 ArrayNode products = (ArrayNode) patched.get("products");
                 for (JsonNode p : products) {
@@ -187,7 +188,7 @@ public class MenuService {
     }
 
 
-    public JsonNode patchJson(JsonNode root, Set<String> disabledExtIds, MenuSnapshot menu){
+    public JsonNode patchJson(JsonNode root, Set<String> disabledExtIds, MenuSnapshot menu,  List<Branch> otherBranches, Branch branch, String suffix) {
         ObjectNode patched = root.deepCopy();
 
         if(patched.has("products")){
@@ -197,9 +198,18 @@ public class MenuService {
                 ObjectNode prodNode = (ObjectNode) product;
                 String productId = prodNode.get("product_id").asText();
 
-                if(disabledExtIds.contains(productId)){
-                    prodNode.put("is_visible", false);
+                ArrayNode excludeArray = objectMapper.createArrayNode();
+
+                otherBranches.forEach(b -> excludeArray.add(b.getExternalId()));
+
+                if (disabledExtIds.contains(productId)) {
+                    excludeArray.add(branch.getExternalId());
                 }
+
+                prodNode.set("exclude_branches", excludeArray);
+
+                prodNode.remove("product_id");
+                prodNode.put("product_id", productId + suffix);
 
                 if(prodNode.has("modifiers")){
                     ArrayNode modifiers = (ArrayNode) prodNode.get("modifiers");
@@ -222,17 +232,17 @@ public class MenuService {
         }
 
         if (allDisabled(menu, "Pizzas", "S")) {
-            disableDoughAndCombo(patched, "S");
+            disableDoughAndCombo(patched, "S", branch.getExternalId());
         }
         if (allDisabled(menu, "Pizzas", "M")) {
-            disableDoughAndCombo(patched, "M");
+            disableDoughAndCombo(patched, "M", branch.getExternalId());
         }
         if (allDisabled(menu, "Pizzas", "L")) {
-            disableDoughAndCombo(patched, "L");
+            disableDoughAndCombo(patched, "L", branch.getExternalId());
         }
 
         if (allDisabled(menu, "Brick Pizzas", null)) {
-            disableDetroitCombo(patched);
+            disableDetroitCombo(patched, branch.getExternalId());
         }
 
         return patched;
@@ -245,14 +255,20 @@ public class MenuService {
                 .allMatch(it -> !it.isAvailable());
     }
 
-    private void disableDoughAndCombo(ObjectNode root, String size){
+    private void disableDoughAndCombo(ObjectNode root, String size, String currentBranchExtId) {
         ArrayNode products = (ArrayNode) root.get("products");
         for (JsonNode product : products) {
             ObjectNode prodNode = (ObjectNode) product;
             String pid = prodNode.get("product_id").asText();
 
-            if (pid.equals("COMBO-PIZZA-" + size)) {
-                prodNode.put("is_visible", false);
+            if (pid.startsWith("COMBO-PIZZA-" + size)) {
+                if (!prodNode.has("exclude_branches")) {
+                    prodNode.set("exclude_branches", objectMapper.createArrayNode());
+                }
+
+                ArrayNode excludeArray = (ArrayNode) prodNode.get("exclude_branches");
+
+                addUnique(excludeArray, currentBranchExtId);
             }
 
             if (prodNode.has("modifiers")) {
@@ -268,13 +284,26 @@ public class MenuService {
         }
     }
 
-    private void disableDetroitCombo(ObjectNode root) {
+    private void disableDetroitCombo(ObjectNode root, String currentBranchExtId) {
         ArrayNode products = (ArrayNode) root.get("products");
         for (JsonNode product : products) {
             ObjectNode prodNode = (ObjectNode) product;
             if (prodNode.get("product_id").asText().startsWith("COMBO-DETROIT")) {
-                prodNode.put("is_visible", false);
+                if (!prodNode.has("exclude_branches")) {
+                    prodNode.set("exclude_branches", objectMapper.createArrayNode());
+                }
+                ArrayNode excludeArray = (ArrayNode) prodNode.get("exclude_branches");
+                addUnique(excludeArray, currentBranchExtId);
             }
         }
+    }
+
+    private void addUnique(ArrayNode array, String value) {
+        for (JsonNode node : array) {
+            if (node.asText().equals(value)) {
+                return;
+            }
+        }
+        array.add(value);
     }
 }

@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -27,9 +28,9 @@ public class ReportService {
     private final ReportMapper reportMapper;
     private final ConsumptionService consumptionService;
 
-    public List<BaseManagementResponse> getAllReportsByBranch(Integer branchNo) {
+    public List<BaseManagementResponse> getAllReportsByBranch(UUID branchId) {
         try {
-            List<Report> reports = reportRepository.findAllByBranchDesc(branchNo);
+            List<Report> reports = reportRepository.findAllByBranchDesc(branchId);
             return reportMapper.toBaseManagementResponse(reports);
         }
         catch (Exception e) {

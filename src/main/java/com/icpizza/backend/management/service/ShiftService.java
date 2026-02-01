@@ -64,6 +64,7 @@ public class ShiftService {
             return shiftMapper.toBaseShiftResponse(report);
         }
         catch (Exception e) {
+            log.error("[MANAGEMENT SHIFT] Failed to edit shift report", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

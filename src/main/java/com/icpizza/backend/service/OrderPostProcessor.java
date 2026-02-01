@@ -15,6 +15,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -68,7 +69,7 @@ public class OrderPostProcessor {
                     && !orderReadyEvent.order.getCustomer().getTelephoneNo().isBlank()) {
                 wa.sendOrderReady(orderReadyEvent.order().getCustomer().getTelephoneNo());
             }
-            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderReadyEvent.order.getId(),  orderReadyEvent.order.getStatus()));
+            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderReadyEvent.order.getId(),  orderReadyEvent.order.getStatus(), orderReadyEvent.order.getBranch().getId()));
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
         }
@@ -85,7 +86,7 @@ public class OrderPostProcessor {
                         orderPickedUpEvent.name(),
                         orderPickedUpEvent.id());
             }
-            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderPickedUpEvent.id(), orderPickedUpEvent.status()));
+            orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderPickedUpEvent.id(), orderPickedUpEvent.status(), orderPickedUpEvent.branchId()));
         } catch (Exception ex) {
             log.error("[ready] WhatsApp send failed", ex);
         }
@@ -112,7 +113,8 @@ public class OrderPostProcessor {
             String telephoneNo,
             String name,
             Long id,
-            String status
+            String status,
+            UUID branchId
     ) {}
 }
 

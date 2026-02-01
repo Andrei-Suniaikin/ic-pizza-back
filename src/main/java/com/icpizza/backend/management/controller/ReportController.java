@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -20,9 +21,9 @@ public class ReportController {
     private final ReportService reportService;
 
     @GetMapping("/base_management")
-    public ResponseEntity<List<BaseManagementResponse>> getBaseManagementReports(@RequestParam(name = "branchNo") Integer branchNo) {
-        log.info("[REPORTS] getting all reports for branch {}", branchNo);
-        List<BaseManagementResponse> reports = reportService.getAllReportsByBranch(branchNo);
+    public ResponseEntity<List<BaseManagementResponse>> getBaseManagementReports(@RequestParam(name = "branchId") UUID branchId) {
+        log.info("[REPORTS] getting all reports for branch {}", branchId);
+        List<BaseManagementResponse> reports = reportService.getAllReportsByBranch(branchId);
         return ResponseEntity.ok(reports);
     }
 

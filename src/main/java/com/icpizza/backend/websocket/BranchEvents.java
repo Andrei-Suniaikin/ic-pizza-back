@@ -11,6 +11,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
@@ -19,25 +20,25 @@ import java.util.concurrent.ScheduledFuture;
 public class BranchEvents {
     private final SimpMessagingTemplate ws;
     private final WebsocketOrderMapper pushMapper;
-    private final Map<Long, Integer> attempts = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> attempts = new ConcurrentHashMap<>();
     private final @Qualifier("orderAckScheduler") ThreadPoolTaskScheduler scheduler;
 
     private final Map<BaseAdminResponse, ScheduledFuture<?>> pendingWorkloadUpdate = new ConcurrentHashMap<>();
     private static final int MAX_ATTEMPTS = 2;
 
     public void onAdminBaseInfoChange(BaseAdminResponse baseAdminResponse) {
-        String dest = "/topic/admin-base-info";
+        String dest = "/topic/"+ baseAdminResponse.branchId() + "/admin-base-info";
         ws.convertAndSend(dest, baseAdminResponse);
 
-        attempts.putIfAbsent(Long.valueOf(baseAdminResponse.branchNumber()), 0);
+        attempts.putIfAbsent(baseAdminResponse.branchId(), 0);
         ScheduledFuture<?> future = scheduler.schedule(() -> {
-            int prev = attempts.getOrDefault(Long.valueOf(baseAdminResponse.branchNumber()), 0);
+            int prev = attempts.getOrDefault(baseAdminResponse.branchId(), 0);
             if (prev >= MAX_ATTEMPTS) {
-                pendingWorkloadUpdate.remove(Long.valueOf(baseAdminResponse.branchNumber()));
-                attempts.remove(Long.valueOf(baseAdminResponse.branchNumber()));
+                pendingWorkloadUpdate.remove(baseAdminResponse.branchId());
+                attempts.remove(baseAdminResponse.branchId());
                 return;
             }
-            attempts.put(Long.valueOf(baseAdminResponse.branchNumber()), prev + 1);
+            attempts.put(baseAdminResponse.branchId(), prev + 1);
             ws.convertAndSend(dest, baseAdminResponse);
             ScheduledFuture<?> again = scheduler.schedule(this::noop, new java.util.Date(System.currentTimeMillis() + 3000));
             pendingWorkloadUpdate.put(baseAdminResponse, again);

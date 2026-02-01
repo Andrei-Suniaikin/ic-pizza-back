@@ -1,5 +1,6 @@
 package com.icpizza.backend.cache;
 
+import com.icpizza.backend.entity.BranchAvailability;
 import com.icpizza.backend.entity.ExtraIngr;
 import com.icpizza.backend.entity.MenuItem;
 import lombok.AllArgsConstructor;

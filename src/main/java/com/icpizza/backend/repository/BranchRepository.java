@@ -3,8 +3,11 @@ package com.icpizza.backend.repository;
 import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.enums.WorkLoadLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -13,4 +16,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     Branch findByBranchNumber(int i);
 
     Branch findByExternalId(String s);
+
+    @Query("select b from Branch b where b.id <> :branchId")
+    List<Branch> findAllExcludeBranches(@Param("branchId") UUID branchId);
 }
