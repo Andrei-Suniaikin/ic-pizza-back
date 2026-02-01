@@ -24,7 +24,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 """,  nativeQuery = true)
     Optional<Event> findTodaysOpenCashEvent(
             @Param("branchId") UUID branchId,
-            @Param("type")EventType type,
+            @Param("type")String type,
             @Param("shiftNo") Integer shiftNo
     );
 

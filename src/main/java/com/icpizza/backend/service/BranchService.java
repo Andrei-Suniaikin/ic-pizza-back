@@ -147,7 +147,7 @@ public class BranchService {
         if (request.type() == EventType.CLOSE_SHIFT_CASH_CHECK) {
             if (request.cashAmount() != null) {
                 Event open = eventRepository
-                        .findTodaysOpenCashEvent(request.branchId(), EventType.OPEN_SHIFT_CASH_CHECK, shiftNo)
+                        .findTodaysOpenCashEvent(request.branchId(), EventType.OPEN_SHIFT_CASH_CHECK.name(), shiftNo)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "open shift not found"));
 
                 LocalDateTime from = open.getDatetime();
@@ -215,8 +215,8 @@ public class BranchService {
         );
     }
 
-    public VatResponse getVatStats(Integer branchNo, LocalDate fromDate, LocalDate toDate) {
-        Branch branch = branchRepository.findByBranchNumber(branchNo);
+    public VatResponse getVatStats(UUID branchId, LocalDate fromDate, LocalDate toDate) {
+        Branch branch = branchRepository.findById(branchId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
         return orderRepository.getVatStat(branch.getId(), fromDate.atStartOfDay(), toDate.atTime(LocalTime.MAX));
     }
 }

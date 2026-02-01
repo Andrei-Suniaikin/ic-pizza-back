@@ -46,10 +46,10 @@ public class BranchController {
     }
 
     @GetMapping("/get_vat_stats")
-    public ResponseEntity<VatResponse> getVatStats(@RequestParam("branchId") Integer branchNo,
+    public ResponseEntity<VatResponse> getVatStats(@RequestParam("branchId") UUID branchid,
                                                    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
                                                    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return new ResponseEntity<>(branchService.getVatStats(branchNo, fromDate, toDate), HttpStatus.OK);
+        return new ResponseEntity<>(branchService.getVatStats(branchid, fromDate, toDate), HttpStatus.OK);
     }
 
     @GetMapping("/fetch_branches")
