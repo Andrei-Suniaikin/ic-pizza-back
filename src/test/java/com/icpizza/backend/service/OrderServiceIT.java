@@ -102,7 +102,7 @@ public class OrderServiceIT extends BaseIT {
                 null,
                 null,
                 false,
-                branch.getBranchNumber()
+                branch.getId()
         );
 
         // when
@@ -203,7 +203,7 @@ public class OrderServiceIT extends BaseIT {
                 null,
                 null,
                 false,
-                branch.getBranchNumber()
+                branch.getId()
         );
 
         //when
@@ -299,7 +299,7 @@ public class OrderServiceIT extends BaseIT {
                 null,
                 null,
                 false,
-                branch.getBranchNumber()
+                branch.getId()
         );
 
         // when

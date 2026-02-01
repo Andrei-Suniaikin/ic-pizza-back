@@ -23,11 +23,17 @@ public interface BranchAvailabilityRepository extends JpaRepository<BranchAvaila
 """)
     List<BranchAvailability> findAllByBranchIdByOrderByIdAsc(@Param("branchId") UUID branchId);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update BranchAvailability ba set ba.isAvailable = :enabled where lower(ba.item.name) = lower(:name) and ba.branch.id=:branchId")
-    int updateAvailableByNameIgnoreCase(@Param("name") String name,
-                                        @Param("enabled") boolean enabled,
-                                        @Param("branchId") UUID branchId
+    @Modifying
+    @Query("""
+    UPDATE BranchAvailability ba 
+    SET ba.isAvailable = :enabled 
+    WHERE ba.branch.id = :branchId 
+    AND LOWER(ba.item.name) =:name
+    """)
+    int updateAvailableByNameIgnoreCase(
+            @Param("name") String name,
+            @Param("enabled") boolean enabled,
+            @Param("branchId") UUID branchId
     );
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
