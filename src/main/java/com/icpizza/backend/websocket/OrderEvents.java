@@ -36,14 +36,14 @@ public class OrderEvents {
 
     public void pushCreated(Order order, List<OrderItem> orderItems) {
         log.info("[PUSH CREATED] orderId={} successfully created",  order.getId());
-        MenuSnapshot snap = menuService.getMenu();
+        MenuSnapshot snap = menuService.getMenu(order.getBranch().getId());
         OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
 
         sendWithAck("/topic/" +order.getBranch().getId() + "/orders", payload);
     }
 
     public void pushUpdated(Order order, List<OrderItem> orderItems) {
-        MenuSnapshot snap = menuService.getMenu();
+        MenuSnapshot snap = menuService.getMenu(order.getBranch().getId());
         OrderPushTO payload = pushMapper.toPush(order, orderItems, snap);
 
         sendWithAck("/topic/" + order.getBranch().getId() + "/order-updates", payload);

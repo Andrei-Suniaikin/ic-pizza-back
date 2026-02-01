@@ -16,9 +16,9 @@ import java.util.UUID;
 @Repository
 public interface BranchAvailabilityRepository extends JpaRepository<BranchAvailability, Long> {
     @Query("""
-    SELECT ba.item
+    SELECT ba
      from BranchAvailability ba 
-     WHERE ba.branch.id =: branchId
+     WHERE ba.branch.id =:branchId
      ORDER BY ba.id ASC 
 """)
     List<BranchAvailability> findAllByBranchIdByOrderByIdAsc(@Param("branchId") UUID branchId);
@@ -41,7 +41,7 @@ public interface BranchAvailabilityRepository extends JpaRepository<BranchAvaila
            update BranchAvailability ba
               set ba.isAvailable = :enabled
             where upper(ba.item.size) = upper(:size)
-            and ba.branch.id =: branchId
+            and ba.branch.id =:branchId
            """)
     int updateAvailableBySize(@Param("size") String size,
                               @Param("enabled") boolean enabled,

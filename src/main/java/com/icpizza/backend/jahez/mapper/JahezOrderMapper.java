@@ -48,7 +48,8 @@ public class JahezOrderMapper {
     }
 
     public MappedOrder map(JahezDTOs.JahezOrderCreatePayload in, Order order) {
-        var snap        = menuService.getMenu();
+        Branch branch = branchRepository.findByExternalId(in.branch_id());
+        var snap        = menuService.getMenu(branch.getId());
         var itemsByExt  = snap.getItemsByExternalId();
         var extrasByExt = snap.getExtrasByExternalId();
 
@@ -57,14 +58,14 @@ public class JahezOrderMapper {
         BigDecimal total = ZERO;
 
         for (var p : nvl(in.products())) {
-            final String pid = p.product_id();
+            final String pid = normalizeId(p.product_id(), branch);
             if (pid == null || pid.isBlank()) continue;
 
             if (pid.startsWith("COMBO-")) {
                 var comboOrderItem = mapCombo(p, order, itemsByExt);
                 resultItems.add(comboOrderItem);
 
-                List<ComboItem> comboParts = buildComboParts(p, comboOrderItem, itemsByExt, extrasByExt);
+                List<ComboItem> comboParts = buildComboParts(p, comboOrderItem, itemsByExt, extrasByExt, branch);
                 allComboItems.addAll(comboParts);
 
                 total = total.add(comboOrderItem.getAmount());
@@ -162,7 +163,7 @@ public class JahezOrderMapper {
     private OrderItem mapCombo(JahezDTOs.JahezOrderCreatePayload.Item p,
                                Order order,
                                Map<String, MenuItem> itemsByExt) {
-        var combo = itemsByExt.get(p.product_id());
+        var combo = itemsByExt.get(normalizeId(p.product_id(), order.getBranch()));
         if (combo == null)
             throw new IllegalArgumentException("Unknown combo product: " + p.product_id());
 
@@ -193,13 +194,19 @@ public class JahezOrderMapper {
         return false;
     }
 
-    private static List<String> collectOptionIds(JahezDTOs.JahezOrderCreatePayload.Item p,
-                                                 java.util.function.Predicate<String> filter) {
+    private List<String> collectOptionIds(JahezDTOs.JahezOrderCreatePayload.Item p,
+                                                 java.util.function.Predicate<String> filter,
+                                          Branch branch) {
         var out = new ArrayList<String>();
         for (var m : nvl(p.modifiers())) {
             for (var o : nvl(m.options())) {
                 var oid = o.id();
-                if (oid != null && filter.test(oid)) out.add(oid);
+                if (oid != null) {
+                    String cleanId = normalizeId(oid, branch);
+                    if (filter.test(cleanId)) {
+                        out.add(oid);
+                    }
+                }
             }
         }
         return out;
@@ -233,13 +240,13 @@ public class JahezOrderMapper {
             JahezDTOs.JahezOrderCreatePayload.Item comboPayload,
             OrderItem comboOrderItem,
             Map<String, MenuItem> itemsByExt,
-            Map<String, ExtraIngr> extrasByExt
+            Map<String, ExtraIngr> extrasByExt,
+            Branch branch
     ) {
         List<ComboItem> parts = new ArrayList<>();
-
-        var pizzaIds = collectOptionIds(comboPayload, id -> id.startsWith(PIZZA_PREFIX));
+        var pizzaIds = collectOptionIds(comboPayload, id -> id.startsWith(PIZZA_PREFIX), branch);
         for (String id : pizzaIds) {
-            var mi = itemsByExt.get(id);
+            var mi = itemsByExt.get(normalizeId(id, branch));
 
             if (mi == null) {
                 log.warn("[JAHEZ] unknown combo pizza id={}, skip", id);
@@ -261,9 +268,9 @@ public class JahezOrderMapper {
 
             parts.add(part);
         }
-        List<String> brickIds = collectOptionIds(comboPayload, id -> id.endsWith("-BRICK"));
+        List<String> brickIds = collectOptionIds(comboPayload, id -> id.endsWith("-BRICK"), branch);
         for(String id: brickIds){
-            MenuItem mi = itemsByExt.get(id);
+            MenuItem mi = itemsByExt.get(normalizeId(id, branch));
             if(mi==null){
                 log.warn("[JAHEZ] unknown brick, skipped" + id);
                 continue;
@@ -277,9 +284,9 @@ public class JahezOrderMapper {
 
             parts.add(part);
         }
-        var sauceIds = collectOptionIds(comboPayload, id -> id.endsWith("-SAUCE"));
+        var sauceIds = collectOptionIds(comboPayload, id -> id.endsWith("-SAUCE"), branch);
         for (String id: sauceIds){
-            MenuItem mi = itemsByExt.get(id);
+            MenuItem mi = itemsByExt.get(normalizeId(id, branch));
             if(mi==null){
                 log.warn("[JAHEZ] unknown sauce, skipped" + id);
                 continue;
@@ -293,9 +300,9 @@ public class JahezOrderMapper {
 
             parts.add(part);
         }
-        List<String> beverageIds = collectOptionIds(comboPayload, this::isBeverageId);
+        List<String> beverageIds = collectOptionIds(comboPayload, this::isBeverageId, branch);
         for(String id: beverageIds){
-            MenuItem mi = itemsByExt.get(id);
+            MenuItem mi = itemsByExt.get(normalizeId(id, branch));
             if(mi==null){
                 log.warn("[JAHEZ] unknown beverage, skipped" + id);
                 continue;
@@ -313,6 +320,15 @@ public class JahezOrderMapper {
     }
 
     private record ExtraWithQty(ExtraIngr extra, int qty) {}
+
+    private String normalizeId(String id, Branch branch) {
+        if (id == null) return null;
+        String suffix = "-" + branch.getExternalId().toUpperCase();
+        if (id.endsWith(suffix)) {
+            return id.substring(0, id.length() - suffix.length());
+        }
+        return id;
+    }
 
     public record MappedOrder(
             List<OrderItem> items,

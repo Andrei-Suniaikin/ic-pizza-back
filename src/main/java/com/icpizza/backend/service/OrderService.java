@@ -276,7 +276,7 @@ public class OrderService {
         List<ComboItem> allComboItems = comboItemRepo.findAllByOrderItemIdIn(orderItemIds);
         var comboItemsByOrderItem = allComboItems.stream()
                 .collect(Collectors.groupingBy(ci -> ci.getOrderItem().getId()));
-        var menu = safeMenu();
+        var menu = safeMenu(branchId);
 
         List<ActiveOrdersTO> result = orders.stream().map(o -> {
             var oiList = itemsByOrder.getOrDefault(o.getId(), List.of());
@@ -347,8 +347,8 @@ public class OrderService {
         log.info(result.toString());
         return Map.of("orders", result);
     }
-    private MenuSnapshot safeMenu() {
-        try { return menuService.getMenu(); } catch (Exception e) { return null; }
+    private MenuSnapshot safeMenu(UUID branchId) {
+        try { return menuService.getMenu(branchId); } catch (Exception e) { return null; }
     }
 
     private String photoByName(MenuSnapshot snap, String name) {
@@ -423,7 +423,7 @@ public class OrderService {
     public Map<String, List<OrderHistoryTO>> getHistory(UUID branchId) {
         List<Order> orders = orderRepo.findReadySince(branchId ,LocalDateTime.now(BAHRAIN).minusDays(1));
 
-        MenuSnapshot snap = menuService.getMenu();
+        MenuSnapshot snap = menuService.getMenu(branchId);
 
         List<OrderHistoryTO> orderHistory = orders
                 .stream()

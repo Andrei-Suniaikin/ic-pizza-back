@@ -27,7 +27,7 @@ public class JahezWebhookController {
             var payload = objectMapper.treeToValue(body, JahezDTOs.JahezOrderCreatePayload.class);
             orderService.createJahezOrder(payload);
         } catch (Exception e) {
-            log.error("Jahez create parse error", e); // но ACK всё равно даём
+            log.error("Jahez create parse error", e);
         }
         return ResponseEntity.ok(JahezDTOs.AckSuccess.OK());
     }
@@ -37,7 +37,7 @@ public class JahezWebhookController {
 
         try {
             var payload = objectMapper.treeToValue(body, JahezDTOs.JahezOrderUpdatePayload.class);
-            orderService.updateJahezOrderStatus(payload); // асинхронно: обновить статус/оплату, оповестить фронт
+            orderService.updateJahezOrderStatus(payload);
         } catch (Exception e) {
             log.error("Jahez update parse error", e);
         }
