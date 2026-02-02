@@ -44,13 +44,21 @@ public class KeetaOrderService {
             log.info("[CREATE KEETA ORDER] Creating Keeta Order");
             Optional<Order> optionalOrder = orderRepository.findByExternalId(Long.valueOf(createKeetaOrderTO.orderId()));
 
+            if (createKeetaOrderTO.status()==50){
+                if(optionalOrder.isPresent()){
+                    Order order = optionalOrder.get();
+                    orderService.deleteOrder(String.valueOf(order.getId()));
+                    return "Success";
+                }
+                else{
+                    log.info("[CREATE KEETA ORDER] Skipping already deleted order...");
+                    return "Success";
+                }
+            }
+
             boolean hasTelephone = !createKeetaOrderTO.telephoneNo().contains("*");
 
-            if (optionalOrder.isPresent() && createKeetaOrderTO.status().equals("50")) {
-                Order order = optionalOrder.get();
-                orderService.deleteOrder(String.valueOf(order.getId()));
-                return "Success";
-            }
+
 
             if (optionalOrder.isEmpty()) {
                 Customer customer = null;
@@ -71,7 +79,7 @@ public class KeetaOrderService {
                 List<ComboItem> comboItems = keetaOrderMapper.toComboItemEntity(createKeetaOrderTO.items(), orderItems);
                 if (comboItems != null) comboItemRepository.saveAllAndFlush(comboItems);
 
-                if(!createKeetaOrderTO.status().equals("40")) {
+                if(createKeetaOrderTO.status()!=40) {
                     orderEvents.pushCreated(order, orderItems);
                     log.info("[CREATE WEBSITE ORDER] Successfully created new order, {}", order);
                 }
@@ -83,7 +91,7 @@ public class KeetaOrderService {
                         log.warn("Failed to update customer for order {}: {}", order.getId(), e.getMessage(), e);
                     }
                 }
-                if(!createKeetaOrderTO.status().equals("40")) {
+                if(createKeetaOrderTO.status()!=40) {
                     orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
                 }
                 return "success";
@@ -92,6 +100,6 @@ public class KeetaOrderService {
         catch (Exception e) {
             throw new RuntimeException("Failed to create keeta order", e);
         }
-        return "error";
+        return "success";
     }
 }

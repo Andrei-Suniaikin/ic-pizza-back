@@ -28,11 +28,11 @@ public class Shift {
     @Column(nullable = true)
     private LocalTime cookEndShift;
     @Column(nullable = true)
-    private double cookTotalHours;
+    private Double cookTotalHours;
     @Column(nullable = true)
     private LocalTime managerStartShift;
     @Column(nullable = true)
     private LocalTime managerEndShift;
     @Column(nullable = true)
-    private double managerTotalHours;
+    private Double managerTotalHours;
 }

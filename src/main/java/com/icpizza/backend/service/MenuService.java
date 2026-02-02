@@ -194,6 +194,19 @@ public class MenuService {
 //                }
 //
 //                prodNode.set("exclude_branches", excludeArray);
+                if(disabledExtIds.contains(productId)){
+                    prodNode.put("is_visible", false);
+                }
+
+                // For Several Branches:
+//                ArrayNode excludeArray = objectMapper.createArrayNode();
+//                // Добавляем другие ветки, чтобы это меню не "сорило" в чужих локациях
+//                otherBranches.forEach(b -> excludeArray.add(b.getExternalId()));
+//
+//                if (disabledExtIds.contains(productId)) {
+//                    addUnique(excludeArray, branch.getExternalId());
+//                }
+//                prodNode.set("exclude_branches", excludeArray);
 
                 prodNode.remove("product_id");
                 prodNode.put("product_id", productId + suffix);
@@ -252,6 +265,7 @@ public class MenuService {
                 if (!prodNode.has("exclude_branches")) {
                     prodNode.set("exclude_branches", objectMapper.createArrayNode());
                 }
+                prodNode.put("is_visible", false);
 
                 ArrayNode excludeArray = (ArrayNode) prodNode.get("exclude_branches");
 
@@ -279,6 +293,7 @@ public class MenuService {
                 if (!prodNode.has("exclude_branches")) {
                     prodNode.set("exclude_branches", objectMapper.createArrayNode());
                 }
+                prodNode.put("is_visible", false);
                 ArrayNode excludeArray = (ArrayNode) prodNode.get("exclude_branches");
                 addUnique(excludeArray, currentBranchExtId);
             }
