@@ -66,7 +66,7 @@ public class OrderPostProcessor {
     public void onOrderReady(OrderReadyEvent orderReadyEvent){
         try {
             if (orderReadyEvent.order.getCustomer()!= null
-                    && !orderReadyEvent.order.getCustomer().getTelephoneNo().isBlank()) {
+                    && !orderReadyEvent.order.getCustomer().getTelephoneNo().isBlank() && !orderReadyEvent.order().getType().equals("Keeta")) {
                 wa.sendOrderReady(orderReadyEvent.order().getCustomer().getTelephoneNo());
             }
             orderEvents.pushOrderStatusUpdate(new PushOrderStatusUpdated(orderReadyEvent.order.getId(),  orderReadyEvent.order.getStatus(), orderReadyEvent.order.getBranch().getId()));

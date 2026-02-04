@@ -100,20 +100,6 @@ public class MenuService {
                 .build();
     }
 
-//    public Optional<JahezDTOs.DataForJahezOrder> getItemDataForJahezOrderByExternalId(String externalId) {
-//        var snap = getMenu();
-//        String key = externalId == null ? null : externalId.trim();
-//        return snap.itemByExt(key).map(i ->
-//                new JahezDTOs.DataForJahezOrder(i.getName(), i.getCategory(), i.getSize()));
-//    }
-//
-//    public Optional<String> getExtraNameByExternalId(String externalId) {
-//        var snap = getMenu();
-//        String key = externalId == null ? null : externalId.trim();
-//        return snap.extraByExt(key).map(ExtraIngr::getName);
-//    }
-//
-//    private static String nvl(String s) { return s == null ? "" : s; }
 
     @Transactional
     public Integer updateAvailability(UpdateAvailabilityRequest request) {
@@ -123,6 +109,7 @@ public class MenuService {
         int result = 0;
 
         for(UpdateAvailabilityRequest.Change change: request.changes()){
+            log.info("Change {} for branch {}", change, request.branchId());
             switch (change.type()){
                 case "group" -> {
                     result+= branchAvailabilityRepository.updateAvailableByNameIgnoreCase(change.name().toLowerCase(),
@@ -198,15 +185,28 @@ public class MenuService {
                 ObjectNode prodNode = (ObjectNode) product;
                 String productId = prodNode.get("product_id").asText();
 
-                ArrayNode excludeArray = objectMapper.createArrayNode();
-
-                otherBranches.forEach(b -> excludeArray.add(b.getExternalId()));
-
-                if (disabledExtIds.contains(productId)) {
-                    excludeArray.add(branch.getExternalId());
+//                ArrayNode excludeArray = objectMapper.createArrayNode();
+//
+//                otherBranches.forEach(b -> excludeArray.add(b.getExternalId()));
+//
+//                if (disabledExtIds.contains(productId)) {
+//                    excludeArray.add(branch.getExternalId());
+//                }
+//
+//                prodNode.set("exclude_branches", excludeArray);
+                if(disabledExtIds.contains(productId)){
+                    prodNode.put("is_visible", false);
                 }
 
-                prodNode.set("exclude_branches", excludeArray);
+                // For Several Branches:
+//                ArrayNode excludeArray = objectMapper.createArrayNode();
+//                // Добавляем другие ветки, чтобы это меню не "сорило" в чужих локациях
+//                otherBranches.forEach(b -> excludeArray.add(b.getExternalId()));
+//
+//                if (disabledExtIds.contains(productId)) {
+//                    addUnique(excludeArray, branch.getExternalId());
+//                }
+//                prodNode.set("exclude_branches", excludeArray);
 
                 prodNode.remove("product_id");
                 prodNode.put("product_id", productId + suffix);
@@ -265,6 +265,7 @@ public class MenuService {
                 if (!prodNode.has("exclude_branches")) {
                     prodNode.set("exclude_branches", objectMapper.createArrayNode());
                 }
+                prodNode.put("is_visible", false);
 
                 ArrayNode excludeArray = (ArrayNode) prodNode.get("exclude_branches");
 
@@ -292,6 +293,7 @@ public class MenuService {
                 if (!prodNode.has("exclude_branches")) {
                     prodNode.set("exclude_branches", objectMapper.createArrayNode());
                 }
+                prodNode.put("is_visible", false);
                 ArrayNode excludeArray = (ArrayNode) prodNode.get("exclude_branches");
                 addUnique(excludeArray, currentBranchExtId);
             }
