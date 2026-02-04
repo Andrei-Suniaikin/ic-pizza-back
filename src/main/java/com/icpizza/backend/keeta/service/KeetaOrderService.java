@@ -58,8 +58,6 @@ public class KeetaOrderService {
 
             boolean hasTelephone = !createKeetaOrderTO.telephoneNo().contains("*");
 
-
-
             if (optionalOrder.isEmpty()) {
                 Customer customer = null;
 
