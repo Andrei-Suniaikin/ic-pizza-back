@@ -73,7 +73,6 @@ public class OrderController {
     public ResponseEntity<OrderInfoTO> getOrderStatus(@RequestParam("order_id") Long orderId){
         log.info("[GetOrderStatus] is triggered for order with ID: "+ orderId);
         OrderInfoTO info = orderService.getOrderInfo(orderId);
-        log.info("[GetOrderStatus] is triggered for order with ID: "+ info);
         return new ResponseEntity<>(info, HttpStatus.OK);
     }
 }

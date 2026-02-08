@@ -28,3 +28,7 @@ tiktok:
   access-token: ${TIKTOK_ACCESS_TOKEN}
   pixel-code: ${PIXEL_CODE}
   tiktok-endpoint: ${TIKTOK_ENDPOINT}
+
+server:
+  error:
+    include-message: always
