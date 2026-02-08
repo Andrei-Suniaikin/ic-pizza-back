@@ -79,7 +79,7 @@ public class KeetaOrderService {
 
                 if(createKeetaOrderTO.status()!=40) {
                     orderEvents.pushCreated(order, orderItems);
-                    log.info("[CREATE WEBSITE ORDER] Successfully created new order, {}", order);
+                    log.info("[CREATE WEBSITE ORDER] Successfully created new order, {}", order.getId());
                 }
 
                 if (customer != null) {

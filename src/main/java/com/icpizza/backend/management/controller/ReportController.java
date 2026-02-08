@@ -29,13 +29,13 @@ public class ReportController {
 
     @PostMapping("/create_report")
     public ResponseEntity<BaseManagementResponse> createReport(@RequestBody CreateReportTO createReportTO){
-        log.info("[REPORTS] creating report {}", createReportTO);
+        log.info("[REPORTS] creating inventory report");
         return new ResponseEntity<>(reportService.createReport(createReportTO), HttpStatus.OK);
     }
 
     @PutMapping("/report_edit")
     public ResponseEntity<BaseManagementResponse> editReport(@RequestBody EditReportTO editReportTO){
-        log.info("[REPORTS] editing report {}", editReportTO);
+        log.info("[REPORTS] editing report: {}", editReportTO.id());
         return new ResponseEntity<>(reportService.editReport(editReportTO), HttpStatus.OK);
     }
 

@@ -89,7 +89,7 @@ public class JahezApi {
                             .bodyToMono(JahezDTOs.AckSuccess.class)
             ).block();
 
-            log.info("Successfully pushed menu to Jahez: {}", resp);
+            log.info("Successfully pushed menu to Jahez");
         } catch (Exception e) {
             log.error("Failed to push menu to Jahez", e);
         }
