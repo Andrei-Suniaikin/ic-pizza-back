@@ -32,7 +32,7 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public CheckCustomerResponse checkCustomer(String telephoneNo) {
-        Optional<Customer> customer = customerRepository.findByTelephoneNo(telephoneNo);
+        Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(telephoneNo);
         Boolean isNewCustomer = customer
                 .filter(value -> (value.getAmountOfOrders() > 0))
                 .map(value -> Boolean.FALSE)
