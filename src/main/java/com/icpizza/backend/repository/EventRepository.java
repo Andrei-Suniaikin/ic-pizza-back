@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,9 +41,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query(value = """
     SELECT * FROM events
     WHERE branch_id=:branchId\s
-      AND cash_amount IS NOT NULL\s
+      AND type NOT IN ('CASH_IN', 'CASH_OUT') \s
     ORDER BY datetime DESC, id DESC\s
     LIMIT 1
 """,  nativeQuery = true)
     Optional<Event> findLastCashEvent(@Param("branchId") UUID branchId);
+
+    @Query(value = "SELECT * from events where branch_id=:branchId and type in (:firstType, :secondType) order by datetime desc limit 30", nativeQuery = true)
+    List<Event> getEvents(@Param("branchId") UUID branchId, @Param("firstType") String type, @Param("secondType") String secondType);
 }

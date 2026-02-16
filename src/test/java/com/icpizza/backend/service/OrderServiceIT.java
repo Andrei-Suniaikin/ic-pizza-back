@@ -1,7 +1,7 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.CreateOrderResponse;
-import com.icpizza.backend.dto.CreateOrderTO;
+import com.icpizza.backend.dto.order.CreateOrderResponse;
+import com.icpizza.backend.dto.order.CreateOrderTO;
 import com.icpizza.backend.entity.*;
 import com.icpizza.backend.enums.WorkLoadLevel;
 import com.icpizza.backend.repository.*;

@@ -1,7 +1,7 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.CheckCustomerResponse;
-import com.icpizza.backend.dto.CreateOrderTO;
+import com.icpizza.backend.dto.order.CheckCustomerResponse;
+import com.icpizza.backend.dto.order.CreateOrderTO;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.keeta.dto.CreateKeetaOrderTO;
@@ -30,14 +30,13 @@ public class CustomerService {
         return customerRepository.findByTelephoneNo(telephoneNo);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public CheckCustomerResponse checkCustomer(String telephoneNo) {
         Optional<Customer> customer = customerRepository.findByTelephoneNo(telephoneNo);
-        Boolean isNewCustomer = customer.isPresent() ?
-                ((customer.get().getAmountOfOrders() > 0) ?
-                        Boolean.FALSE :
-                        Boolean.TRUE) :
-                Boolean.TRUE;
+        Boolean isNewCustomer = customer
+                .filter(value -> (value.getAmountOfOrders() > 0))
+                .map(value -> Boolean.FALSE)
+                .orElse(Boolean.TRUE);
         return new CheckCustomerResponse(isNewCustomer);
     }
 

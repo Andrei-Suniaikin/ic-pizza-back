@@ -1,6 +1,6 @@
 package com.icpizza.backend.repository;
 
-import com.icpizza.backend.dto.TopProductsStat;
+import com.icpizza.backend.dto.stats.TopProductsStat;
 import com.icpizza.backend.entity.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

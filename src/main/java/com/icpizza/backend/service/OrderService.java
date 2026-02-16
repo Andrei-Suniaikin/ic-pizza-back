@@ -1,8 +1,10 @@
 package com.icpizza.backend.service;
 
 import com.icpizza.backend.cache.MenuSnapshot;
-import com.icpizza.backend.dto.*;
+import com.icpizza.backend.dto.branch.CashUpdateRequest;
+import com.icpizza.backend.dto.order.*;
 import com.icpizza.backend.entity.*;
+import com.icpizza.backend.enums.CashUpdateType;
 import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.jahez.api.JahezApi;
 import com.icpizza.backend.jahez.dto.JahezDTOs;
@@ -78,6 +80,12 @@ public class OrderService {
             } catch (Exception e) {
                 log.warn("Failed to update customer for order {}: {}", order.getId(), e.getMessage(), e);
             }
+        }
+
+        if (order.getPaymentType().equals("Cash")){
+            branchService.cashUpdate(new CashUpdateRequest(
+                    order.getBranch().getId(), CashUpdateType.CASH_IN, order.getAmountPaid(), "Order payment")
+            );
         }
 
         orderPostProcessor.onOrderCreated(new OrderPostProcessor.OrderCreatedEvent(order, orderItems, comboItems));
@@ -233,6 +241,18 @@ public class OrderService {
                     .add(editOrderTO.amountPaid()));
             customerRepo.save(customer);
         }
+
+        if(orderToEdit.getPaymentType().equals("Cash") && !editOrderTO.paymentType().equals("Cash")) {
+            branchService.cashUpdate(new CashUpdateRequest(
+                    orderToEdit.getBranch().getId(), CashUpdateType.CASH_OUT, orderToEdit.getAmountPaid(), "Order payment refund")
+            );
+        }
+        else if(!orderToEdit.getPaymentType().equals("Cash") && editOrderTO.paymentType().equals("Cash")) {
+            branchService.cashUpdate(new CashUpdateRequest(
+                    orderToEdit.getBranch().getId(), CashUpdateType.CASH_IN, orderToEdit.getAmountPaid(), "Order payment")
+            );
+        }
+
         orderToEdit.setPaymentType(editOrderTO.paymentType());
         orderToEdit.setNotes(editOrderTO.notes());
         orderToEdit.setAmountPaid(editOrderTO.amountPaid());
@@ -261,6 +281,7 @@ public class OrderService {
         return new EditOrderResponse(orderToEdit.getId());
     }
 
+    @Transactional(readOnly = true)
     public Map<String, List<ActiveOrdersTO>> getAllActiveOrders(UUID branchId) {
         List<Order> orders = orderRepo.findActiveOrders(branchId);
         if (orders.isEmpty()) return Map.of("orders", List.of());
@@ -347,6 +368,7 @@ public class OrderService {
         log.info(result.toString());
         return Map.of("orders", result);
     }
+
     private MenuSnapshot safeMenu(UUID branchId) {
         try { return menuService.getMenu(branchId); } catch (Exception e) { return null; }
     }
@@ -389,6 +411,13 @@ public class OrderService {
         if(transactionRepo.existsByOrder(order)){
             transactionRepo.deleteByOrder(order);
         }
+
+        if(order.getPaymentType().equals("Cash")) {
+            branchService.cashUpdate(new CashUpdateRequest(
+                    order.getBranch().getId(), CashUpdateType.CASH_OUT, order.getAmountPaid(), "Order payment refund")
+            );
+        }
+
         List<Long> orderItemIds = orderItemRepo.findIdsByOrderId(id);
         comboItemRepo.deleteByOrderItemIds(orderItemIds);
         orderItemRepo.deleteAllByOrderId(order.getId());
@@ -396,10 +425,6 @@ public class OrderService {
 
         if(customer!=null){
             customer.setAmountOfOrders(customer.getAmountOfOrders()-1);
-            if(customer.getAmountOfOrders()==0){
-                customerRepo.delete(customer);
-                return "Order "+orderId+" was successfully deleted";
-            }
             customer.setAmountPaid(customer.getAmountPaid().subtract(order.getAmountPaid()));
             customerRepo.save(customer);
         }
@@ -407,6 +432,7 @@ public class OrderService {
         return "Order "+orderId+" was successfully deleted";
     }
 
+    @Transactional(readOnly = true)
     public OrderInfoTO getOrderInfo(Long orderId) {
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order with id "+orderId+" wasn't found"));
@@ -420,6 +446,7 @@ public class OrderService {
         public static BigDecimal nz(BigDecimal x) { return x == null ? BigDecimal.ZERO : x; }
     }
 
+    @Transactional(readOnly = true)
     public Map<String, List<OrderHistoryTO>> getHistory(UUID branchId) {
         List<Order> orders = orderRepo.findReadySince(branchId ,LocalDateTime.now(BAHRAIN).minusDays(1));
 

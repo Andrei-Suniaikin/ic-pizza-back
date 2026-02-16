@@ -4,13 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.icpizza.backend.cache.MenuSnapshot;
-import com.icpizza.backend.dto.UpdateAvailabilityRequest;
+import com.icpizza.backend.dto.menu.MenuResponse;
+import com.icpizza.backend.dto.menu.UpdateAvailabilityRequest;
 import com.icpizza.backend.entity.*;
 import com.icpizza.backend.jahez.api.JahezApi;
-import com.icpizza.backend.jahez.dto.JahezDTOs;
 import com.icpizza.backend.mapper.MenuMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.icpizza.backend.repository.*;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CachePut;
@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MenuService {
-    private final MenuItemRepository menuRepository;
     private final ExtraIngrRepository ingrRepository;
     private final AtomicLong versionGen = new AtomicLong(0);
     private final MenuMapper menuMapper;
@@ -39,6 +38,7 @@ public class MenuService {
     private final ObjectMapper objectMapper;
     private final BranchAvailabilityRepository branchAvailabilityRepository;
     private final BranchRepository branchRepository;
+    private final ToppingRepository toppingRepository;
 
     @Cacheable(cacheNames = "menu", key = "#branchId")
     public MenuSnapshot getMenu(UUID branchId) {
@@ -78,6 +78,16 @@ public class MenuService {
                         .build())
                 .toList();
 
+        List<Topping> toppings = toppingRepository.findAll().stream()
+                .map(topping -> Topping.builder()
+                        .id(topping.getId())
+                        .name(topping.getName())
+                        .photo(topping.getPhoto())
+                        .price(topping.getPrice())
+                        .available(topping.getAvailable())
+                        .build())
+                .toList();
+
         Map<String, MenuItem> itemsByExt = itemDTOs.stream()
                 .filter(i -> i.getExternalId() != null && !i.getExternalId().isBlank())
                 .collect(Collectors.toUnmodifiableMap(
@@ -93,6 +103,7 @@ public class MenuService {
         return MenuSnapshot.builder()
                 .items(itemDTOs)
                 .extras(extraDTOs)
+                .toppings(toppings)
                 .generatedAt(Instant.now())
                 .itemsByExternalId(itemsByExt)
                 .extrasByExternalId(extrasByExt)
@@ -131,7 +142,8 @@ public class MenuService {
         return  result;
     }
 
-    public HashMap<String, Object> getBaseAppInfo(UUID branchId) {
+    @Transactional(readOnly = true)
+    public MenuResponse getBaseAppInfo(UUID branchId) {
         return menuMapper.toBaseInfoSnakeCase(getMenu(branchId));
     }
 

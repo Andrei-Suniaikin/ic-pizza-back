@@ -1,6 +1,6 @@
 package com.icpizza.backend.controller;
 
-import com.icpizza.backend.dto.CheckCustomerResponse;
+import com.icpizza.backend.dto.order.CheckCustomerResponse;
 import com.icpizza.backend.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

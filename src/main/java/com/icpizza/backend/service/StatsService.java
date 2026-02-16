@@ -1,8 +1,6 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.*;
-import com.icpizza.backend.entity.Customer;
-import com.icpizza.backend.entity.Order;
+import com.icpizza.backend.dto.stats.*;
 import com.icpizza.backend.repository.CustomerRepository;
 import com.icpizza.backend.repository.OrderItemRepository;
 import com.icpizza.backend.repository.OrderRepository;
@@ -13,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
