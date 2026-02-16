@@ -85,14 +85,13 @@ public class CustomerService {
     }
 
     @Transactional
-    public Customer createWatsappCustomer(String senderPhone) {
+    public void createWatsappCustomer(String senderPhone) {
         Customer customer = new Customer();
         customer.setTelephoneNo(senderPhone);
         customer.setId(String.format("%08d", ThreadLocalRandom.current().nextInt(1, 100000000)));
         customer.setWaitingForName(1);
         customer.setAmountPaid(BigDecimal.ZERO);
         customerRepository.save(customer);
-        return customer;
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +110,7 @@ public class CustomerService {
         else return false;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Customer saveUserName(String senderPhone, String messageText) {
         Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(senderPhone);
         if (customer.isPresent()){
