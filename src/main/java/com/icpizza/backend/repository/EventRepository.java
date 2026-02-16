@@ -42,6 +42,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     SELECT * FROM events
     WHERE branch_id=:branchId\s
       AND type NOT IN ('CASH_IN', 'CASH_OUT') \s
+    AND cash_amount IS NOT NULL \s
     ORDER BY datetime DESC, id DESC\s
     LIMIT 1
 """,  nativeQuery = true)
