@@ -1,10 +1,9 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.OrderPaymentTO;
+import com.icpizza.backend.dto.order.OrderPaymentTO;
 import com.icpizza.backend.entity.Branch;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.Transaction;
-import com.icpizza.backend.enums.OrderStatus;
 import com.icpizza.backend.repository.BranchRepository;
 import com.icpizza.backend.repository.OrderRepository;
 import com.icpizza.backend.repository.TransactionRepository;

@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -33,4 +34,7 @@ public class Branch {
 
     @Column(name = "branch_name")
     private String branchName;
+
+    @Column(name = "branch_balance")
+    private BigDecimal branchBalance;
 }

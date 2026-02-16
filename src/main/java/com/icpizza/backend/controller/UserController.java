@@ -1,6 +1,6 @@
 package com.icpizza.backend.controller;
 
-import com.icpizza.backend.dto.UserTO;
+import com.icpizza.backend.dto.order.UserTO;
 import com.icpizza.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

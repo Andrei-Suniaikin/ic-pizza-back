@@ -1,6 +1,6 @@
 package com.icpizza.backend.controller;
 
-import com.icpizza.backend.dto.StatsResponse;
+import com.icpizza.backend.dto.stats.StatsResponse;
 import com.icpizza.backend.service.StatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;

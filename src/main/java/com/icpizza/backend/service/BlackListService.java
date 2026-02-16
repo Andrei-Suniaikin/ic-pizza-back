@@ -1,7 +1,7 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.BlackListRequest;
-import com.icpizza.backend.dto.BlackListResponse;
+import com.icpizza.backend.dto.blacklist.BlackListRequest;
+import com.icpizza.backend.dto.blacklist.BlackListResponse;
 import com.icpizza.backend.entity.BlackListCstmr;
 import com.icpizza.backend.entity.Customer;
 import com.icpizza.backend.repository.BlackListRepository;

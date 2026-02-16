@@ -3,6 +3,7 @@ package com.icpizza.backend.cache;
 import com.icpizza.backend.entity.BranchAvailability;
 import com.icpizza.backend.entity.ExtraIngr;
 import com.icpizza.backend.entity.MenuItem;
+import com.icpizza.backend.entity.Topping;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,7 @@ import java.util.Optional;
 public class MenuSnapshot {
     private List<MenuItem> items;
     private List<ExtraIngr> extras;
+    private List<Topping> toppings;
     private Instant generatedAt;
     private long version;
 

@@ -1,7 +1,7 @@
 package com.icpizza.backend.websocket;
 
 import com.icpizza.backend.cache.MenuSnapshot;
-import com.icpizza.backend.dto.PushOrderStatusUpdated;
+import com.icpizza.backend.dto.order.PushOrderStatusUpdated;
 import com.icpizza.backend.entity.Order;
 import com.icpizza.backend.entity.OrderItem;
 import com.icpizza.backend.service.MenuService;

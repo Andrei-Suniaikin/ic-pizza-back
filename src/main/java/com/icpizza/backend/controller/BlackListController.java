@@ -1,7 +1,7 @@
 package com.icpizza.backend.controller;
 
-import com.icpizza.backend.dto.BlackListRequest;
-import com.icpizza.backend.dto.BlackListResponse;
+import com.icpizza.backend.dto.blacklist.BlackListRequest;
+import com.icpizza.backend.dto.blacklist.BlackListResponse;
 import com.icpizza.backend.service.BlackListService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

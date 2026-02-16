@@ -1,6 +1,6 @@
 package com.icpizza.backend.mapper;
 
-import com.icpizza.backend.dto.UserTO;
+import com.icpizza.backend.dto.order.UserTO;
 import com.icpizza.backend.entity.User;
 import org.springframework.stereotype.Component;
 

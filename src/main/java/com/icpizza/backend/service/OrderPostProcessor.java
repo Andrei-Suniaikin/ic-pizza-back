@@ -1,6 +1,6 @@
 package com.icpizza.backend.service;
 
-import com.icpizza.backend.dto.PushOrderStatusUpdated;
+import com.icpizza.backend.dto.order.PushOrderStatusUpdated;
 import com.icpizza.backend.entity.*;
 import com.icpizza.backend.tiktok.service.TikTokService;
 import com.icpizza.backend.websocket.OrderEvents;

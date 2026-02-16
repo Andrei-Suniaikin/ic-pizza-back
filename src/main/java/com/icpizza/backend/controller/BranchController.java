@@ -1,8 +1,10 @@
 package com.icpizza.backend.controller;
 
-import com.icpizza.backend.dto.*;
+import com.icpizza.backend.dto.branch.*;
 import com.icpizza.backend.management.dto.VatResponse;
+import com.icpizza.backend.repository.EventRepository;
 import com.icpizza.backend.service.BranchService;
+import com.icpizza.backend.service.EventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BranchController {
     private final BranchService branchService;
+    private final EventService eventService;
 
     @PutMapping("/update_workload_level")
     public ResponseEntity<String> updateWorkloadLevel(@RequestBody UpdateWorkLoadLevelTO updateWorkLoadLevelTO) {
@@ -55,5 +58,21 @@ public class BranchController {
     @GetMapping("/fetch_branches")
     public ResponseEntity<List<BranchTO>> fetchBranches() {
         return new ResponseEntity<>(branchService.getAllBranches(), HttpStatus.OK);
+    }
+
+    @PostMapping("/cash_update")
+    public ResponseEntity<BranchBalanceResponse> cashUpdate(@RequestBody CashUpdateRequest request){
+        log.info("Cash update request for "+request);
+        return new ResponseEntity<>(branchService.cashUpdate(request), HttpStatus.OK);
+    }
+
+    @GetMapping("/get_branch_balance")
+    public ResponseEntity<BranchBalanceResponse> getBranchBalance(@RequestParam("branchId") UUID branchId) {
+        return new ResponseEntity<>(branchService.getBranchBalance(branchId), HttpStatus.OK);
+    }
+
+    @GetMapping("/get_transactions")
+    public ResponseEntity<List<CashRegisterEventTO>> getTransactions(@RequestParam("branchId") UUID branchId) {
+        return new ResponseEntity<>(eventService.getEvents(branchId), HttpStatus.OK);
     }
 }

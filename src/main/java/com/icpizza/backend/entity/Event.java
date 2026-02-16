@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "events")
@@ -17,7 +18,8 @@ import java.time.LocalDateTime;
 public class Event {
     @Id
     @Column(name = "id", length = 36, nullable = false, updatable = false)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private UUID id;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -26,8 +28,8 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime datetime;
 
-    @Column(name = "prep_plan", columnDefinition = "TEXT")
-    private String prepPlan;
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
 
     @Column(name = "cash_amount")
     private BigDecimal cashAmount;
@@ -36,6 +38,6 @@ public class Event {
     @ManyToOne(fetch = FetchType.LAZY)
     private Branch branch;
 
-    @Column(name = "shift_no", nullable = false)
+    @Column(name = "shift_no", nullable = true)
     private Integer shiftNo;
 }
