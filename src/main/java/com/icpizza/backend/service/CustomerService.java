@@ -9,6 +9,7 @@ import com.icpizza.backend.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -104,13 +105,11 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public boolean userHasName(String senderPhone) {
-
         Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(senderPhone);
-        if(customer.isPresent() && customer.get().getName()!=null) return true;
-        else return false;
+        return customer.isPresent() && customer.get().getName() != null;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Customer saveUserName(String senderPhone, String messageText) {
         Optional<Customer> customer = customerRepository.findByTelephoneNoWithoutLock(senderPhone);
         if (customer.isPresent()){
