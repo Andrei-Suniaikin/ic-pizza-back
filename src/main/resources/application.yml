@@ -24,6 +24,10 @@ jahez:
   read-timeout-ms: 5000
 
 
+meta:
+  secret: ${META_SECRET}
+  pixel-id: ${META_PIXEL_ID}
+
 tiktok:
   access-token: ${TIKTOK_ACCESS_TOKEN}
   pixel-code: ${PIXEL_CODE}
