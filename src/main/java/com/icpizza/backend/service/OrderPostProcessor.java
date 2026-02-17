@@ -25,7 +25,7 @@ public class OrderPostProcessor {
     private final OrderEvents orderEvents;
     private final TikTokService tikTokService;
     private final BranchService branchService;
-    private final CustomerService customerService;
+    private final MetaService metaService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -42,6 +42,7 @@ public class OrderPostProcessor {
             wa.sendOrderConfirmation(tel, event.order,clientMsg);
             wa.sendEstimation(tel, estimation, event.order().getId());
             tikTokService.sendPlaceAnOrder(event.order.getCustomer().getTelephoneNo(), event.order.getAmountPaid());
+            metaService.sendPurchaseEvent(event.order.getId(), event.order.getCustomer().getTelephoneNo());
         }
 
         wa.sendOrderToKitchenText2(event.order.getOrderNo(), kitchenMsg, tel, false, name);
