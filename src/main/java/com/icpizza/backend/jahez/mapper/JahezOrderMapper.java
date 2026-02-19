@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -69,6 +70,14 @@ public class JahezOrderMapper {
                 allComboItems.addAll(comboParts);
 
                 total = total.add(comboOrderItem.getAmount());
+                continue;
+            }
+
+            if (pid.startsWith("MINI-")) {
+                var ramadanOrderItem = mapRamadan(p, order);
+                resultItems.add(ramadanOrderItem);
+                total = total.add(ramadanOrderItem.getAmount());
+
                 continue;
             }
 
@@ -182,6 +191,47 @@ public class JahezOrderMapper {
         return oi;
     }
 
+    private OrderItem mapRamadan(JahezDTOs.JahezOrderCreatePayload.Item p,
+                                 Order order){
+        Map<String, Integer> pizzasForDesc = new HashMap<>();
+        if (p.modifiers() != null) {
+            for (var modifier : p.modifiers()) {
+                if (modifier.options() != null){
+                    for (var option : modifier.options()) {
+                        String name = switch (option.id()){
+                            case "MINI-PIZZA-PEPPERONI-S" -> "Pepperoni";
+                            case "MINI-PIZZA-MARGHERITA-S"-> "Margherita";
+                            case "MINI-PIZZA-SMOKED-TURKEY-MUSHROOM-S"->"Smoke Turkey & Mushroom";
+                            case "MINI-PIZZA-CHICKEN-S" -> "Chicken";
+                            case "MINI-PIZZA-VEGETARIAN-S" -> "Vegetarian";
+                            case "MINI-PIZZA-VEGGIE-MEXICAN-S" -> "Zaatar with Labneh";
+                            default -> throw new IllegalStateException("Unexpected value: " + option.id());
+                        };
+                        int qty = option.quantity();
+                        pizzasForDesc.put(name, qty);
+                    }
+                }
+            }
+        }
+        String description = pizzasForDesc.entrySet().stream()
+                .map(entry -> entry.getKey() + " x" + entry.getValue())
+                .collect(Collectors.joining(", "));
+
+
+
+        OrderItem oi = new OrderItem();
+        oi.setOrder(order);
+        oi.setName("Mini Pizza Box");
+        oi.setCategory("Ramadan");
+        oi.setDescription(description + " " + p.notes());
+        oi.setAmount(p.final_price());
+        oi.setDiscountAmount(ZERO);
+        oi.setGarlicCrust(false);
+        oi.setThinDough(false);
+        oi.setQuantity(p.quantity());
+        return oi;
+    }
+
     private static <T> List<T> nvl(List<T> v) { return v == null ? List.of() : v; }
     private static int def(Integer v, int d) { return v == null ? d : v; }
 
@@ -195,7 +245,7 @@ public class JahezOrderMapper {
     }
 
     private List<String> collectOptionIds(JahezDTOs.JahezOrderCreatePayload.Item p,
-                                                 java.util.function.Predicate<String> filter,
+                                                 Predicate<String> filter,
                                           Branch branch) {
         var out = new ArrayList<String>();
         for (var m : nvl(p.modifiers())) {
